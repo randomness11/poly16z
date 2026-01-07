@@ -1,6 +1,22 @@
 # poly16z
 
-> **AI-Powered Polymarket Trading Bots - Inspired by a16z**
+<div align="center">
+
+**AI-Powered Polymarket Trading Bots**
+
+*Inspired by a16z's approach to crypto innovation*
+
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+Build intelligent trading bots for Polymarket in minutes using natural language strategy prompts and Claude AI.
+
+[Quick Start](#-quick-start) • [Examples](#-example-strategies) • [Documentation](#-documentation) • [Create Your Own](#-create-your-own-bot-in-10-minutes)
+
+</div>
+
+---
 
 A powerful, modular Python framework for creating intelligent trading bots on Polymarket using Claude AI. Define your strategy in natural language, and let AI handle the decision-making.
 

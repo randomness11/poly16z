@@ -46,10 +46,13 @@ htmlcov/
 logs/
 *.log
 
-# Data
-data/
+# Data files (but not source code)
+/data/
 *.db
 *.sqlite
+*.csv
+*.json
+!poly16z/
 
 # Backtest results
 backtests/
