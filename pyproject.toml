@@ -44,9 +44,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ankit/poly16z"
-Documentation = "https://github.com/ankit/poly16z#readme"
-Repository = "https://github.com/ankit/poly16z"
+Homepage = "https://github.com/randomness11/poly16z"
+Documentation = "https://github.com/randomness11/poly16z#readme"
+Repository = "https://github.com/randomness11/poly16z"
 
 [tool.black]
 line-length = 100
