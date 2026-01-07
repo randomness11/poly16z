@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from poly16z.agent.strategy import BaseStrategy
 
 
+
 class Observation(BaseModel):
     """Represents an observation of the market state."""
 
@@ -28,6 +29,12 @@ class Observation(BaseModel):
     balance: float
     signals: Dict[str, Any] = {}
     metadata: Dict[str, Any] = {}
+    
+    # Intelligence Layer (Phase 2)
+    news_context: Optional[str] = None  # Formatted news summary
+    sentiment_summary: Optional[str] = None  # Formatted sentiment analysis
+    market_sentiments: Dict[str, Any] = {}  # market_id -> sentiment data
+
 
 
 class Decision(BaseModel):
@@ -44,31 +51,112 @@ class Decision(BaseModel):
 
 
 class AgentMemory(BaseModel):
-    """Agent memory for context persistence."""
+    """Agent memory for context persistence with optional database storage."""
 
     observations: List[Observation] = []
     decisions: List[Decision] = []
     trades: List[Order] = []
     metadata: Dict[str, Any] = {}
 
-    def add_observation(self, observation: Observation) -> None:
-        """Add observation to memory."""
+    # Database persistence
+    enable_persistence: bool = False
+    _db_manager: Any = None  # DatabaseManager instance
+    _agent_name: str = "unknown"
+    _agent_type: str = "unknown"
+
+    def configure_persistence(self, db_manager: Any, agent_name: str = "unknown", agent_type: str = "unknown") -> None:
+        """Enable database persistence."""
+        self.enable_persistence = True
+        self._db_manager = db_manager
+        self._agent_name = agent_name
+        self._agent_type = agent_type
+        logger.info(f"AgentMemory: Database persistence enabled for {agent_name}")
+
+    async def add_observation(self, observation: Observation) -> None:
+        """Add observation to memory and optionally persist."""
         self.observations.append(observation)
         # Keep only last 100 observations
         if len(self.observations) > 100:
             self.observations = self.observations[-100:]
 
-    def add_decision(self, decision: Decision) -> None:
-        """Add decision to memory."""
+        # Persist to database
+        if self.enable_persistence and self._db_manager:
+            try:
+                import json
+                from poly16z.storage.repositories import ObservationRepository
+
+                async with self._db_manager.get_session() as session:
+                    await ObservationRepository.create(
+                        session=session,
+                        timestamp=observation.timestamp,
+                        balance=observation.balance,
+                        num_markets=len(observation.markets),
+                        num_positions=len(observation.positions),
+                        markets_json=json.dumps([m.model_dump(mode='json') for m in observation.markets]),
+                        positions_json=json.dumps([p.model_dump(mode='json') for p in observation.positions]),
+                        signals_json=json.dumps(observation.signals),
+                        metadata_json=json.dumps(observation.metadata),
+                        news_context=observation.news_context,
+                        sentiment_summary=observation.sentiment_summary,
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to persist observation: {e}")
+
+    async def add_decision(self, decision: Decision) -> None:
+        """Add decision to memory and optionally persist."""
         self.decisions.append(decision)
         if len(self.decisions) > 100:
             self.decisions = self.decisions[-100:]
 
-    def add_trade(self, trade: Order) -> None:
-        """Add trade to memory."""
+        # Persist to database
+        if self.enable_persistence and self._db_manager:
+            try:
+                import json
+                from poly16z.storage.repositories import DecisionRepository
+
+                async with self._db_manager.get_session() as session:
+                    await DecisionRepository.create(
+                        session=session,
+                        action=decision.action,
+                        market_id=decision.market_id,
+                        outcome=decision.outcome,
+                        size=decision.size,
+                        price=decision.price,
+                        reasoning=decision.reasoning,
+                        confidence=decision.confidence,
+                        metadata_json=json.dumps(decision.metadata),
+                        agent_name=self._agent_name,
+                        agent_type=self._agent_type,
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to persist decision: {e}")
+
+    async def add_trade(self, trade: Order) -> None:
+        """Add trade to memory and optionally persist."""
         self.trades.append(trade)
         if len(self.trades) > 100:
             self.trades = self.trades[-100:]
+
+        # Persist to database
+        if self.enable_persistence and self._db_manager:
+            try:
+                from poly16z.storage.repositories import TradeRepository
+
+                async with self._db_manager.get_session() as session:
+                    await TradeRepository.create(
+                        session=session,
+                        order_id=trade.order_id,
+                        market_id=trade.market_id,
+                        outcome=trade.outcome,
+                        side=trade.side,
+                        size=trade.size,
+                        price=trade.price,
+                        status=trade.status,
+                        filled_size=trade.filled_size,
+                        timestamp=trade.timestamp,
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to persist trade: {e}")
 
     def get_recent_history(self, n: int = 10) -> str:
         """Get formatted recent history."""
@@ -98,6 +186,7 @@ class BaseAgent(ABC):
         loop_interval: int = 60,
         strategy: Optional['BaseStrategy'] = None,
         dry_run: bool = False,
+        enable_persistence: bool = True,
     ):
         """
         Initialize base agent.
@@ -106,9 +195,10 @@ class BaseAgent(ABC):
             client: Polymarket API client
             risk_manager: Risk management system
             name: Agent name
-            loop_interval: Seconds between loop iterations
+            loop_interval: Seconds between loop intervals
             strategy: Optional strategy to filter markets
             dry_run: If True, log decisions but don't place real trades
+            enable_persistence: If True, enable database persistence
         """
         self.client = client
         self.risk_manager = risk_manager
@@ -117,8 +207,23 @@ class BaseAgent(ABC):
         self.strategy = strategy
         self.dry_run = dry_run
 
+        # Sizing configuration
+        self.sizing_method = "manual"  # manual, fixed_pct, kelly, confidence_based
+        self.kelly_fraction = 0.25
+
         self.memory = AgentMemory()
         self.running = False
+
+        # Setup database persistence if enabled
+        if enable_persistence:
+            try:
+                from poly16z.storage.database import get_db_manager
+
+                db_manager = get_db_manager()
+                agent_type = self.__class__.__name__.replace("Agent", "").lower()
+                self.memory.configure_persistence(db_manager, agent_name=name, agent_type=agent_type)
+            except Exception as e:
+                logger.warning(f"Could not enable database persistence: {e}")
 
         mode_str = " [DRY RUN MODE]" if dry_run else ""
         logger.info(f"Agent '{name}' initialized{mode_str}")
@@ -196,6 +301,21 @@ class BaseAgent(ABC):
             if not decision.market_id or not decision.outcome:
                 logger.error("Buy decision missing market_id or outcome")
                 return False
+                
+            # Apply Auto-Sizing if enabled
+            if self.sizing_method != "manual" and decision.price:
+                original_size = decision.size
+                decision.size = self.risk_manager.calculate_position_size(
+                    price=decision.price,
+                    confidence=decision.confidence,
+                    method=self.sizing_method,
+                    kelly_fraction=self.kelly_fraction
+                )
+                if decision.size != original_size:
+                    logger.info(
+                        f"[{self.name}] 📏 Auto-sized trade: {original_size:.2f} -> {decision.size:.2f} "
+                        f"({self.sizing_method})"
+                    )
 
             # Check risk limits
             if not self.risk_manager.can_open_position(decision.size, decision.price or 0.5):

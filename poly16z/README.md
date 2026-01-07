@@ -83,11 +83,51 @@ python main.py --strategy news --keywords "Bitcoin,ETH" --agent openai
 python main.py --strategy custom --agent gemini
 ```
 
+### 🤝 Ensemble Mode (Multi-Agent Consensus)
+Run multiple AI models in parallel and aggregate their decisions:
+
+```bash
+# Majority voting (2/3 must agree)
+python main.py --strategy custom --agent ensemble --dry-run
+
+# Weighted voting (confidence-weighted)
+python main.py --agent ensemble --voting weighted --dry-run
+
+# Unanimous (all agents must agree)
+python main.py --agent ensemble --voting unanimous --dry-run
+
+# Custom agents (just OpenAI and Gemini)
+python main.py --agent ensemble --ensemble-agents "openai,gemini" --dry-run
+```
+
+| Voting Strategy | Description |
+|-----------------|-------------|
+| `majority` | Simple majority wins (default) |
+| `weighted` | Votes weighted by confidence score |
+| `unanimous` | All agents must agree |
+| `highest` | Trust most confident agent |
+
 ### Dry Run (Safe Testing)
 ```bash
 python main.py --strategy custom --dry-run
 ```
 Watch the bot analyze markets and log what it *would* trade — without spending money.
+
+### 📰 News Intelligence (Perplexity API)
+Enhance your bot with real-time news context:
+
+```bash
+# Enable news for top 3 markets (default)
+python main.py --strategy custom --news --dry-run
+
+# News for top 5 markets
+python main.py --strategy custom --news --top-markets 5 --dry-run
+
+# Combine with ensemble for maximum intelligence
+python main.py --agent ensemble --news --voting weighted --dry-run
+```
+
+Requires `PERPLEXITY_API_KEY` in your `.env` file.
 
 ### Interactive CLI
 ```bash
@@ -155,12 +195,27 @@ The built-in `RiskManager` protects you from blowing up:
 - **Position Sizing**: Limits max bet per trade
 - **Max Exposure**: Caps total capital at risk
 
-Configure in code:
-```python
-risk = RiskManager(initial_capital=1000)
 risk.limits.max_daily_loss = 50.0    # Stop at -$50
 risk.limits.max_position_size = 25.0  # Max $25 per bet
 ```
+
+### ⚖️ Auto-Sizing (Kelly Criterion)
+Let math determine your bet size based on confidence:
+
+```bash
+# Use Quarter Kelly (safer)
+python main.py --sizing kelly --kelly-fraction 0.25
+
+# Scale linearly with confidence
+python main.py --sizing confidence_based
+```
+
+| Method | Description |
+|--------|-------------|
+| `manual` | Use size from strategy prompt (default) |
+| `fixed_pct` | Fixed % of capital per trade |
+| `kelly` | Optimal growth strategy (Kelly Criterion) |
+| `confidence_based` | Size scales with AI confidence |
 
 ---
 

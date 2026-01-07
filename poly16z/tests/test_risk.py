@@ -30,9 +30,23 @@ def test_position_sizing_kelly(risk_manager):
     # However, code also caps at max_position_size (default 100)
     # So expected is 100 / 0.5 = 200 shares
     
+    risk_manager.limits.max_position_size = 1000.0  # Increase limit to test Kelly
+    
+    # 1. Full Kelly (0.25 default fraction? No, verify_kelly will check default)
+    # With default fraction=0.25, it returns 0.2 * 0.25 = 0.05 (5%)
+    # 5% of 1000 = 50. 50 / 0.5 = 100 shares.
+    
     size = risk_manager.calculate_position_size(price=0.5, confidence=0.6, method="kelly")
-    expected_size = 200.0
-    assert size == expected_size
+    # Expected: Kelly=0.2, Fraction=0.25 -> 0.05. Capital=1000 -> 50. Price=0.5 -> 100 shares.
+    assert size == 100.0
+
+    # 2. Custom Fraction (e.g. 0.5)
+    # returns 0.2 * 0.5 = 0.1 (10%)
+    # 10% of 1000 = 100. 100 / 0.5 = 200 shares.
+    size_half = risk_manager.calculate_position_size(
+        price=0.5, confidence=0.6, method="kelly", kelly_fraction=0.5
+    )
+    assert size_half == 200.0
 
 def test_stop_loss(risk_manager):
     # Entry 0.5, Current 0.3. Loss = 0.2. % Loss = 0.2/0.5 = 40%

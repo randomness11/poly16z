@@ -2,6 +2,7 @@
 
 from poly16z.agent.base import BaseAgent
 from poly16z.agent.anthropic_agent import AnthropicAgent
+from poly16z.agent.ensemble import EnsembleAgent, VotingStrategy
 
 # Optional AI providers
 try:
@@ -14,4 +15,10 @@ try:
 except ImportError:
     OpenAIAgent = None
 
-__all__ = ["BaseAgent", "AnthropicAgent", "GeminiAgent", "OpenAIAgent"]
+try:
+    from poly16z.agent.mock_agent import MockAgent
+except ImportError:
+    MockAgent = None
+
+__all__ = ["BaseAgent", "AnthropicAgent", "GeminiAgent", "OpenAIAgent", "EnsembleAgent", "VotingStrategy", "MockAgent"]
+

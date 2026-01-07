@@ -134,11 +134,54 @@ class RiskManager:
 
         return True
 
+    def kelly_size(
+        self,
+        win_prob: float,
+        price: float,
+        fraction: float = 0.25,
+    ) -> float:
+        """
+        Calculate Kelly criterion position size.
+        
+        Args:
+            win_prob: Probability of winning (0-1)
+            price: Entry price (0-1)
+            fraction: Kelly fraction (default 0.25 for Quarter Kelly)
+            
+        Returns:
+            Position size in shares
+        """
+        if price <= 0 or price >= 1:
+            return 0.0
+            
+        # Kelly Formula: f = p - (1-p)/b
+        # where b is net odds received = (1-price)/price
+        loss_prob = 1 - win_prob
+        net_odds = (1 - price) / price
+        
+        if net_odds == 0:
+            return 0.0
+            
+        kelly_pct = win_prob - (loss_prob / net_odds)
+        
+        # Apply fractional Kelly (e.g. Quarter Kelly) for safety
+        adjusted_pct = kelly_pct * fraction
+        
+        # Clamp between 0 and max position size %
+        # We also respect the global max_position_size in calculate_position_size
+        safe_pct = max(0.0, adjusted_pct)
+        
+        position_value = self.current_capital * safe_pct
+        size = position_value / price
+        
+        return size
+
     def calculate_position_size(
         self,
         price: float,
         confidence: float = 0.5,
         method: str = "fixed_pct",
+        **kwargs,
     ) -> float:
         """
         Calculate appropriate position size.
@@ -147,6 +190,7 @@ class RiskManager:
             price: Entry price
             confidence: Confidence level (0-1)
             method: Sizing method ("fixed_pct", "kelly", "confidence_based")
+            **kwargs: Extra args for methods (e.g. kelly_fraction)
 
         Returns:
             Position size in shares
@@ -164,17 +208,9 @@ class RiskManager:
             size = position_value / price
 
         elif method == "kelly":
-            # Kelly criterion (simplified)
-            # f = (p * b - q) / b where b = odds, p = prob of win, q = prob of loss
-            win_prob = confidence
-            loss_prob = 1 - confidence
-            odds = (1 - price) / price  # Implied odds
-
-            kelly_fraction = (win_prob * odds - loss_prob) / odds
-            kelly_fraction = max(0, min(kelly_fraction, 0.25))  # Cap at 25%
-
-            position_value = self.current_capital * kelly_fraction
-            size = position_value / price
+            # Kelly criterion
+            kelly_fraction = kwargs.get("kelly_fraction", 0.25)
+            size = self.kelly_size(confidence, price, fraction=kelly_fraction)
 
         else:
             # Default to fixed percentage

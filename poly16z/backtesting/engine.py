@@ -256,63 +256,44 @@ class BacktestEngine:
         """
         final_capital = self.equity_history[-1]["equity"] if self.equity_history else self.initial_capital
 
-        # Calculate trade statistics
-        winning_trades = 0
-        losing_trades = 0
-        wins = []
-        losses = []
-
-        for i in range(0, len(self.trades), 2):
-            if i + 1 >= len(self.trades):
-                break
-
-            buy_trade = self.trades[i]
-            sell_trade = self.trades[i + 1]
-
-            pnl = sell_trade.size * (sell_trade.price - buy_trade.price)
-
-            if pnl > 0:
-                winning_trades += 1
-                wins.append(pnl)
-            else:
-                losing_trades += 1
-                losses.append(abs(pnl))
-
-        total_trades = winning_trades + losing_trades
-        win_rate = winning_trades / total_trades if total_trades > 0 else 0.0
-        avg_win = sum(wins) / len(wins) if wins else 0.0
-        avg_loss = sum(losses) / len(losses) if losses else 0.0
-
-        # Calculate max drawdown
-        max_drawdown = self._calculate_max_drawdown()
-
-        # Calculate Sharpe ratio
-        sharpe_ratio = self._calculate_sharpe_ratio()
-
+        from poly16z.backtesting.metrics import PerformanceMetrics
+        
+        # Prepare data for metrics
+        trade_dicts = [
+            {
+                "market_id": t.market_id,
+                "side": t.side,
+                "size": t.size,
+                "price": t.price,
+                "timestamp": getattr(t, "timestamp", None)
+            }
+            for t in self.trades
+        ]
+        
+        metrics = PerformanceMetrics.calculate_all_metrics(self.equity_history, trade_dicts)
+        
+        # Calculate winning/losing trades manually for count if not in metrics
+        # (The metrics class does return win_rate/total_trades/profit_factor)
+        
+        # Helper to get return
+        total_return = final_capital - self.initial_capital
+        
         return BacktestResult(
             start_time=start_time,
             end_time=end_time,
             initial_capital=self.initial_capital,
             final_capital=final_capital,
-            total_return=final_capital - self.initial_capital,
-            total_return_pct=(final_capital - self.initial_capital) / self.initial_capital,
-            total_trades=total_trades,
-            winning_trades=winning_trades,
-            losing_trades=losing_trades,
-            win_rate=win_rate,
-            avg_win=avg_win,
-            avg_loss=avg_loss,
-            max_drawdown=max_drawdown,
-            sharpe_ratio=sharpe_ratio,
-            trades=[
-                {
-                    "market_id": t.market_id,
-                    "side": t.side,
-                    "size": t.size,
-                    "price": t.price,
-                }
-                for t in self.trades
-            ],
+            total_return=total_return,
+            total_return_pct=total_return / self.initial_capital,
+            total_trades=metrics.get("total_trades", 0),
+            winning_trades=0,  # TODO: Update metrics to return counts
+            losing_trades=0,
+            win_rate=metrics.get("win_rate", 0.0),
+            avg_win=0.0,
+            avg_loss=0.0,
+            max_drawdown=metrics.get("max_drawdown", 0.0),
+            sharpe_ratio=metrics.get("sharpe_ratio", 0.0),
+            trades=trade_dicts,
             equity_curve=self.equity_history,
         )
 
