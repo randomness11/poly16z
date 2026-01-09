@@ -90,11 +90,6 @@ nav {
     font-size: 1.1em;
 }
 
-.logo::before {
-    /* Removed custom prompt before text since we have an icon now */
-    content: '';
-}
-
 .by-line {
     font-size: 0.8em;
     color: var(--dim);
@@ -140,18 +135,28 @@ h1 {
     font-size: 2.8rem;
     font-weight: 400;
     line-height: 1.25;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     color: var(--accent);
+    text-transform: uppercase;
+    /* Ensure caps match user flavor */
+    letter-spacing: -1px;
 }
 
 .highlight {
     color: var(--green);
 }
 
+.hero-sub {
+    font-size: 1.3rem;
+    color: var(--fg);
+    margin-bottom: 2rem;
+    font-weight: 500;
+}
+
 .desc {
     color: var(--dim);
     font-size: 1.1rem;
-    max-width: 600px;
+    max-width: 650px;
     margin-bottom: 2.5rem;
 }
 
@@ -293,6 +298,10 @@ h1 {
 @media (max-width: 768px) {
     h1 {
         font-size: 2rem;
+    }
+
+    .hero-sub {
+        font-size: 1.1rem;
     }
 
     .controls {
