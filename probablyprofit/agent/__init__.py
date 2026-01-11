@@ -3,6 +3,7 @@
 from probablyprofit.agent.base import BaseAgent
 from probablyprofit.agent.anthropic_agent import AnthropicAgent
 from probablyprofit.agent.ensemble import EnsembleAgent, VotingStrategy
+from probablyprofit.agent.fallback import FallbackAgent, create_fallback_agent, FallbackConfig
 
 # Optional AI providers
 try:
@@ -20,5 +21,17 @@ try:
 except ImportError:
     MockAgent = None
 
-__all__ = ["BaseAgent", "AnthropicAgent", "GeminiAgent", "OpenAIAgent", "EnsembleAgent", "VotingStrategy", "MockAgent"]
+__all__ = [
+    "BaseAgent",
+    "AnthropicAgent",
+    "GeminiAgent",
+    "OpenAIAgent",
+    "EnsembleAgent",
+    "VotingStrategy",
+    "MockAgent",
+    # Fallback
+    "FallbackAgent",
+    "create_fallback_agent",
+    "FallbackConfig",
+]
 

@@ -189,8 +189,8 @@ class RiskManager:
         Args:
             price: Entry price
             confidence: Confidence level (0-1)
-            method: Sizing method ("fixed_pct", "kelly", "confidence_based")
-            **kwargs: Extra args for methods (e.g. kelly_fraction)
+            method: Sizing method ("fixed_pct", "kelly", "confidence_based", "dynamic")
+            **kwargs: Extra args for methods (e.g. kelly_fraction, volatility)
 
         Returns:
             Position size in shares
@@ -212,6 +212,10 @@ class RiskManager:
             kelly_fraction = kwargs.get("kelly_fraction", 0.25)
             size = self.kelly_size(confidence, price, fraction=kelly_fraction)
 
+        elif method == "dynamic":
+            # Dynamic sizing based on multiple factors
+            size = self._dynamic_size(price, confidence, **kwargs)
+
         else:
             # Default to fixed percentage
             position_value = self.current_capital * self.limits.position_size_pct
@@ -224,6 +228,95 @@ class RiskManager:
         logger.debug(
             f"Position size calculated: {size:.2f} shares "
             f"(${size * price:.2f}) using {method}"
+        )
+
+        return size
+
+    def _dynamic_size(
+        self,
+        price: float,
+        confidence: float,
+        volatility: float = 0.5,
+        win_streak: int = 0,
+        lose_streak: int = 0,
+        **kwargs,
+    ) -> float:
+        """
+        Dynamic position sizing based on multiple factors.
+
+        Increases size when:
+        - High confidence
+        - Low volatility
+        - On a winning streak
+
+        Decreases size when:
+        - Low confidence
+        - High volatility
+        - On a losing streak
+        - Recent losses
+
+        Args:
+            price: Entry price
+            confidence: AI confidence (0-1)
+            volatility: Market volatility (0-1, higher = more volatile)
+            win_streak: Number of consecutive wins
+            lose_streak: Number of consecutive losses
+
+        Returns:
+            Position size in shares
+        """
+        base_pct = self.limits.position_size_pct
+
+        # Confidence factor (0.5x to 1.5x)
+        confidence_factor = 0.5 + confidence
+
+        # Volatility factor (reduce size in volatile markets)
+        # Low volatility (0.2) -> 1.2x, High volatility (0.8) -> 0.6x
+        volatility_factor = 1.4 - volatility
+
+        # Streak factor
+        if win_streak >= 3:
+            streak_factor = min(1.3, 1.0 + win_streak * 0.05)  # Up to 1.3x on hot streak
+        elif lose_streak >= 2:
+            streak_factor = max(0.5, 1.0 - lose_streak * 0.15)  # Down to 0.5x on cold streak
+        else:
+            streak_factor = 1.0
+
+        # Recent performance factor (reduce if recent losses)
+        perf_factor = 1.0
+        if self.daily_pnl < 0:
+            # Reduce size proportionally to daily losses
+            loss_ratio = abs(self.daily_pnl) / self.limits.max_daily_loss
+            perf_factor = max(0.5, 1.0 - loss_ratio * 0.5)
+
+        # Capital preservation factor (reduce as capital decreases)
+        capital_ratio = self.current_capital / self.initial_capital
+        if capital_ratio < 0.8:
+            capital_factor = max(0.5, capital_ratio)
+        else:
+            capital_factor = 1.0
+
+        # Combine all factors
+        combined_factor = (
+            confidence_factor *
+            volatility_factor *
+            streak_factor *
+            perf_factor *
+            capital_factor
+        )
+
+        # Apply to base size
+        adjusted_pct = base_pct * combined_factor
+        adjusted_pct = max(0.01, min(0.20, adjusted_pct))  # Clamp 1-20%
+
+        position_value = self.current_capital * adjusted_pct
+        size = position_value / price
+
+        logger.debug(
+            f"Dynamic sizing: base={base_pct:.2%} × "
+            f"conf={confidence_factor:.2f} × vol={volatility_factor:.2f} × "
+            f"streak={streak_factor:.2f} × perf={perf_factor:.2f} × "
+            f"capital={capital_factor:.2f} = {adjusted_pct:.2%}"
         )
 
         return size

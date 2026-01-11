@@ -15,6 +15,14 @@ from probablyprofit.web.api.models import (
     PerformanceResponse,
     EquityCurvePoint,
     MarketResponse,
+    ExposureResponse,
+    PositionExposure,
+    CorrelationGroup,
+    ArbitrageResponse,
+    ArbitrageOpportunityResponse,
+    PaperPortfolioResponse,
+    PaperPositionResponse,
+    PaperTradeResponse,
 )
 
 router = APIRouter(prefix="/api")
@@ -214,3 +222,435 @@ async def set_dry_run(enabled: bool):
     state.agent.dry_run = enabled
 
     return {"dry_run": enabled}
+
+
+@router.get("/exposure", response_model=ExposureResponse)
+async def get_exposure():
+    """Get portfolio exposure breakdown with correlation analysis."""
+    from probablyprofit.web.app import get_agent_state
+
+    state = get_agent_state()
+    if not state:
+        raise HTTPException(status_code=503, detail="Agent not initialized")
+
+    risk_manager = state.agent.risk_manager
+    stats = risk_manager.get_stats()
+
+    # Build position exposure list
+    positions: List[PositionExposure] = []
+    exposure_by_category: dict = {}
+    warnings: List[str] = []
+
+    # Get positions from risk manager
+    for market_id, size in risk_manager.open_positions.items():
+        # Try to get current market data
+        try:
+            # Get market question from last observation if available
+            market_question = market_id[:50] + "..."
+            current_price = 0.5  # Default
+            entry_price = 0.5
+
+            if state.agent.memory.observations:
+                last_obs = state.agent.memory.observations[-1]
+                for m in last_obs.markets:
+                    if m.condition_id == market_id:
+                        market_question = m.question
+                        current_price = m.outcome_prices[0] if m.outcome_prices else 0.5
+                        break
+
+            value = size * current_price
+            pnl = size * (current_price - entry_price)
+            pnl_pct = ((current_price / entry_price) - 1) * 100 if entry_price > 0 else 0
+
+            # Detect correlation group
+            correlation_group = _detect_correlation_group(market_question)
+
+            # Track exposure by category
+            if correlation_group:
+                exposure_by_category[correlation_group] = exposure_by_category.get(correlation_group, 0) + value
+
+            positions.append(PositionExposure(
+                market_id=market_id,
+                market_question=market_question,
+                outcome="Yes",
+                size=size,
+                entry_price=entry_price,
+                current_price=current_price,
+                value=value,
+                pnl=pnl,
+                pnl_pct=pnl_pct,
+                correlation_group=correlation_group,
+                has_trailing_stop=False,
+                stop_price=None,
+            ))
+
+        except Exception as e:
+            logger.warning(f"Error processing position {market_id}: {e}")
+
+    # Build correlation groups
+    correlation_groups: List[CorrelationGroup] = []
+    for group_name, total_exp in exposure_by_category.items():
+        group_positions = [p for p in positions if p.correlation_group == group_name]
+        risk_level = "low"
+        if total_exp > risk_manager.limits.max_position_size * 2:
+            risk_level = "high"
+            warnings.append(f"High concentration in {group_name} (${total_exp:.2f})")
+        elif total_exp > risk_manager.limits.max_position_size:
+            risk_level = "medium"
+
+        correlation_groups.append(CorrelationGroup(
+            group_name=group_name,
+            total_exposure=total_exp,
+            positions_count=len(group_positions),
+            markets=[p.market_id[:20] for p in group_positions],
+            risk_level=risk_level,
+        ))
+
+    # Calculate risk metrics
+    total_exposure = sum(p.value for p in positions)
+    risk_metrics = {
+        "concentration_ratio": max(exposure_by_category.values()) / total_exposure if total_exposure > 0 else 0,
+        "position_count": len(positions),
+        "avg_position_size": total_exposure / len(positions) if positions else 0,
+        "max_position_size": max(p.value for p in positions) if positions else 0,
+        "exposure_pct": (total_exposure / stats["current_capital"]) * 100 if stats["current_capital"] > 0 else 0,
+        "daily_pnl": stats["daily_pnl"],
+        "daily_loss_limit_used": abs(stats["daily_pnl"]) / risk_manager.limits.max_daily_loss * 100,
+    }
+
+    # Add warnings
+    if risk_metrics["exposure_pct"] > 80:
+        warnings.append(f"High portfolio exposure ({risk_metrics['exposure_pct']:.1f}%)")
+    if risk_metrics["daily_loss_limit_used"] > 50:
+        warnings.append(f"Daily loss limit {risk_metrics['daily_loss_limit_used']:.0f}% used")
+    if len(positions) >= risk_manager.limits.max_positions - 1:
+        warnings.append(f"Near max positions limit ({len(positions)}/{risk_manager.limits.max_positions})")
+
+    return ExposureResponse(
+        total_value=stats["current_capital"],
+        total_exposure=total_exposure,
+        cash_balance=stats["current_capital"] - total_exposure,
+        positions=positions,
+        correlation_groups=correlation_groups,
+        exposure_by_category=exposure_by_category,
+        risk_metrics=risk_metrics,
+        warnings=warnings,
+    )
+
+
+def _detect_correlation_group(question: str) -> Optional[str]:
+    """Detect which correlation group a market belongs to."""
+    question_lower = question.lower()
+
+    correlation_keywords = {
+        "politics_us": ["trump", "biden", "republican", "democrat", "election", "gop", "dnc", "congress", "senate"],
+        "crypto": ["bitcoin", "btc", "ethereum", "eth", "crypto", "solana", "memecoin"],
+        "tech": ["apple", "google", "microsoft", "meta", "amazon", "nvidia", "ai", "openai"],
+        "sports": ["nba", "nfl", "mlb", "super bowl", "championship", "playoffs", "world cup"],
+        "economy": ["fed", "interest rate", "inflation", "gdp", "recession", "unemployment"],
+        "entertainment": ["oscar", "grammy", "emmy", "movie", "box office", "netflix", "streaming"],
+    }
+
+    for group, keywords in correlation_keywords.items():
+        if any(kw in question_lower for kw in keywords):
+            return group
+
+    return None
+
+
+@router.get("/positions")
+async def get_positions():
+    """Get current open positions."""
+    from probablyprofit.web.app import get_agent_state
+
+    state = get_agent_state()
+    if not state:
+        raise HTTPException(status_code=503, detail="Agent not initialized")
+
+    risk_manager = state.agent.risk_manager
+    positions = []
+
+    for market_id, size in risk_manager.open_positions.items():
+        positions.append({
+            "market_id": market_id,
+            "size": size,
+            "outcome": "Yes",
+            "avg_price": 0.5,
+            "current_price": 0.5,
+            "pnl": 0.0,
+        })
+
+    return positions
+
+
+# Global arbitrage detector instance
+_arbitrage_detector = None
+
+
+def _get_arbitrage_detector():
+    """Get or create the arbitrage detector singleton."""
+    global _arbitrage_detector
+    if _arbitrage_detector is None:
+        from probablyprofit.arbitrage.detector import ArbitrageDetector, ArbitrageConfig
+        _arbitrage_detector = ArbitrageDetector(
+            config=ArbitrageConfig(min_profit_pct=0.02)
+        )
+    return _arbitrage_detector
+
+
+@router.get("/arbitrage", response_model=ArbitrageResponse)
+async def get_arbitrage():
+    """Get current arbitrage opportunities."""
+    detector = _get_arbitrage_detector()
+
+    opportunities = detector.get_opportunities()
+    matched_pairs = detector.get_matched_pairs()
+
+    return ArbitrageResponse(
+        opportunities=[
+            ArbitrageOpportunityResponse(
+                opportunity_type=opp.opportunity_type,
+                buy_platform=opp.buy_platform,
+                buy_side=opp.buy_side,
+                buy_price=opp.buy_price,
+                sell_platform=opp.sell_platform,
+                sell_side=opp.sell_side,
+                sell_price=opp.sell_price,
+                combined_cost=opp.combined_cost,
+                gross_profit_pct=opp.gross_profit_pct,
+                net_profit_pct=opp.net_profit_pct,
+                confidence=opp.confidence,
+                polymarket_question=opp.pair.polymarket_question,
+                kalshi_question=opp.pair.kalshi_question,
+                similarity_score=opp.pair.similarity_score,
+            )
+            for opp in opportunities
+        ],
+        matched_pairs_count=len(matched_pairs),
+        last_scan=detector._last_scan,
+        polymarket_markets=0,  # Will be updated after scan
+        kalshi_markets=0,
+    )
+
+
+@router.post("/arbitrage/scan", response_model=ArbitrageResponse)
+async def scan_arbitrage():
+    """Trigger a new arbitrage scan."""
+    from probablyprofit.web.app import get_agent_state
+
+    detector = _get_arbitrage_detector()
+
+    # Get clients from agent state if available
+    state = get_agent_state()
+    poly_markets_count = 0
+    kalshi_markets_count = 0
+
+    if state:
+        # Update detector with current clients
+        detector.polymarket_client = state.agent.client
+
+        # Try to get Kalshi client if configured
+        try:
+            from probablyprofit.api.kalshi_client import KalshiClient
+            import os
+
+            kalshi_key = os.getenv("KALSHI_API_KEY_ID")
+            if kalshi_key:
+                detector.kalshi_client = KalshiClient(
+                    api_key_id=kalshi_key,
+                    private_key_path=os.getenv("KALSHI_PRIVATE_KEY_PATH"),
+                    demo=os.getenv("KALSHI_DEMO", "false").lower() == "true",
+                )
+        except Exception as e:
+            logger.warning(f"Kalshi client not available: {e}")
+
+    try:
+        opportunities = await detector.scan(force_refresh=True)
+        matched_pairs = detector.get_matched_pairs()
+
+        return ArbitrageResponse(
+            opportunities=[
+                ArbitrageOpportunityResponse(
+                    opportunity_type=opp.opportunity_type,
+                    buy_platform=opp.buy_platform,
+                    buy_side=opp.buy_side,
+                    buy_price=opp.buy_price,
+                    sell_platform=opp.sell_platform,
+                    sell_side=opp.sell_side,
+                    sell_price=opp.sell_price,
+                    combined_cost=opp.combined_cost,
+                    gross_profit_pct=opp.gross_profit_pct,
+                    net_profit_pct=opp.net_profit_pct,
+                    confidence=opp.confidence,
+                    polymarket_question=opp.pair.polymarket_question,
+                    kalshi_question=opp.pair.kalshi_question,
+                    similarity_score=opp.pair.similarity_score,
+                )
+                for opp in opportunities
+            ],
+            matched_pairs_count=len(matched_pairs),
+            last_scan=detector._last_scan,
+            polymarket_markets=poly_markets_count,
+            kalshi_markets=kalshi_markets_count,
+        )
+    except Exception as e:
+        logger.error(f"Arbitrage scan failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/arbitrage/pairs")
+async def get_matched_pairs():
+    """Get all matched market pairs between platforms."""
+    detector = _get_arbitrage_detector()
+    pairs = detector.get_matched_pairs()
+
+    return [
+        {
+            "polymarket_id": p.polymarket_id,
+            "polymarket_question": p.polymarket_question,
+            "polymarket_yes_price": p.polymarket_yes_price,
+            "kalshi_ticker": p.kalshi_ticker,
+            "kalshi_question": p.kalshi_question,
+            "kalshi_yes_price": p.kalshi_yes_price,
+            "similarity_score": p.similarity_score,
+            "price_diff": abs(p.polymarket_yes_price - p.kalshi_yes_price),
+        }
+        for p in pairs
+    ]
+
+
+# ============ Paper Trading Endpoints ============
+
+
+@router.get("/paper", response_model=PaperPortfolioResponse)
+async def get_paper_portfolio():
+    """Get paper trading portfolio status."""
+    from probablyprofit.web.app import get_agent_state
+
+    state = get_agent_state()
+    if not state:
+        raise HTTPException(status_code=503, detail="Agent not initialized")
+
+    # Check if paper trading is enabled
+    paper_engine = getattr(state.agent, "paper_engine", None)
+    if not paper_engine:
+        return PaperPortfolioResponse(
+            enabled=False,
+            initial_capital=0,
+            cash=0,
+            positions_value=0,
+            total_value=0,
+            total_return=0,
+            total_return_pct=0,
+            realized_pnl=0,
+            unrealized_pnl=0,
+            total_fees=0,
+            positions_count=0,
+            trades_count=0,
+            positions=[],
+            recent_trades=[],
+        )
+
+    summary = paper_engine.get_portfolio_summary()
+    positions = paper_engine.get_all_positions()
+    trades = paper_engine.get_trade_history(limit=20)
+
+    return PaperPortfolioResponse(
+        enabled=True,
+        initial_capital=summary["initial_capital"],
+        cash=summary["cash"],
+        positions_value=summary["positions_value"],
+        total_value=summary["total_value"],
+        total_return=summary["total_return"],
+        total_return_pct=summary["total_return_pct"],
+        realized_pnl=summary["realized_pnl"],
+        unrealized_pnl=summary["unrealized_pnl"],
+        total_fees=summary["total_fees"],
+        positions_count=summary["positions_count"],
+        trades_count=summary["trades_count"],
+        positions=[
+            PaperPositionResponse(
+                market_id=p.market_id,
+                market_question=p.market_question,
+                side=p.side,
+                size=p.size,
+                avg_price=p.avg_price,
+                current_price=p.current_price,
+                value=p.value,
+                unrealized_pnl=p.unrealized_pnl,
+                unrealized_pnl_pct=p.unrealized_pnl_pct,
+            )
+            for p in positions
+        ],
+        recent_trades=[
+            PaperTradeResponse(
+                trade_id=t.trade_id,
+                timestamp=t.timestamp,
+                market_id=t.market_id,
+                side=t.side,
+                action=t.action,
+                size=t.size,
+                price=t.price,
+                value=t.value,
+                fees=t.fees,
+            )
+            for t in trades
+        ],
+    )
+
+
+@router.post("/paper/reset")
+async def reset_paper_portfolio(initial_capital: float = Query(10000.0)):
+    """Reset paper trading portfolio."""
+    from probablyprofit.web.app import get_agent_state
+
+    state = get_agent_state()
+    if not state:
+        raise HTTPException(status_code=503, detail="Agent not initialized")
+
+    paper_engine = getattr(state.agent, "paper_engine", None)
+    if not paper_engine:
+        raise HTTPException(status_code=400, detail="Paper trading not enabled")
+
+    paper_engine.reset(initial_capital=initial_capital)
+    return {"status": "reset", "initial_capital": initial_capital}
+
+
+@router.post("/paper/trade")
+async def execute_paper_trade(
+    market_id: str = Query(...),
+    side: str = Query(...),
+    action: str = Query(...),
+    size: float = Query(...),
+    price: float = Query(...),
+    market_question: str = Query("Unknown market"),
+):
+    """Execute a manual paper trade."""
+    from probablyprofit.web.app import get_agent_state
+
+    state = get_agent_state()
+    if not state:
+        raise HTTPException(status_code=503, detail="Agent not initialized")
+
+    paper_engine = getattr(state.agent, "paper_engine", None)
+    if not paper_engine:
+        raise HTTPException(status_code=400, detail="Paper trading not enabled")
+
+    trade = paper_engine.execute_trade(
+        market_id=market_id,
+        market_question=market_question,
+        side=side,
+        action=action,
+        size=size,
+        price=price,
+    )
+
+    if not trade:
+        raise HTTPException(status_code=400, detail="Trade failed - check parameters and balance")
+
+    return {
+        "status": "executed",
+        "trade_id": trade.trade_id,
+        "value": trade.value,
+        "fees": trade.fees,
+    }

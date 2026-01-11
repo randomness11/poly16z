@@ -2,6 +2,7 @@
 Polymarket API Client
 
 Provides a clean wrapper around the Polymarket CLOB API.
+Includes retry logic and circuit breakers for resilience.
 """
 
 import asyncio
@@ -27,6 +28,7 @@ except ImportError:
 from probablyprofit.api.exceptions import (
     APIException,
     NetworkException,
+    RateLimitException,
     ValidationException,
     OrderException,
 )
@@ -36,6 +38,18 @@ from probablyprofit.utils.validators import (
     validate_non_negative,
     validate_side,
 )
+from probablyprofit.utils.resilience import (
+    retry,
+    CircuitBreaker,
+    RateLimiter,
+)
+
+# Circuit breakers for different API endpoints
+_gamma_circuit = CircuitBreaker("polymarket-gamma", failure_threshold=5, timeout=60.0)
+_clob_circuit = CircuitBreaker("polymarket-clob", failure_threshold=5, timeout=60.0)
+
+# Rate limiter (Polymarket allows ~10 req/s)
+_api_rate_limiter = RateLimiter("polymarket-api", calls=8, period=1.0)
 
 
 class Market(BaseModel):
@@ -171,6 +185,20 @@ class PolymarketClient:
         Returns:
             List of Market objects
         """
+        return await self._get_markets_with_retry(active, limit, offset)
+
+    @retry(max_attempts=3, base_delay=2.0)
+    @_gamma_circuit
+    async def _get_markets_with_retry(
+        self,
+        active: bool,
+        limit: int,
+        offset: int,
+    ) -> List[Market]:
+        """Internal method with retry and circuit breaker."""
+        # Rate limit
+        await _api_rate_limiter.acquire()
+
         try:
             # Use Gamma API for market metadata (better data than CLOB /markets)
             response = await self.gamma_client.get(
@@ -257,9 +285,15 @@ class PolymarketClient:
             logger.info(f"Fetched {len(markets)} markets from Gamma API")
             return markets
 
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 429:
+                raise RateLimitException(f"Rate limited by Polymarket: {e}")
+            raise NetworkException(f"HTTP error fetching markets: {e}")
+        except httpx.RequestError as e:
+            raise NetworkException(f"Network error fetching markets: {e}")
         except Exception as e:
             logger.error(f"Error fetching markets: {e}")
-            return []
+            raise APIException(f"Failed to fetch markets: {e}")
 
     async def get_market(self, condition_id: str) -> Optional[Market]:
         """
@@ -331,7 +365,7 @@ class PolymarketClient:
         order_type: str = "LIMIT",
     ) -> Optional[Order]:
         """
-        Place an order with validation.
+        Place an order with validation and resilience.
 
         Args:
             market_id: Market condition ID
@@ -352,7 +386,7 @@ class PolymarketClient:
         if not self.client:
             raise OrderException("Cannot place order - no API credentials provided")
 
-        # Validate inputs
+        # Validate inputs BEFORE any API calls
         try:
             validate_side(side)
             validate_positive(size, "size")
@@ -365,6 +399,9 @@ class PolymarketClient:
             raise ValidationException("market_id cannot be empty")
         if not outcome:
             raise ValidationException("outcome cannot be empty")
+
+        # Rate limit orders
+        await _api_rate_limiter.acquire()
 
         try:
             logger.info(f"Placing {side} order: {size} shares @ ${price} on {outcome}")

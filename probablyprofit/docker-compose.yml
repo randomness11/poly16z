@@ -1,11 +1,166 @@
 version: '3.8'
 
+# =============================================================================
+# probablyprofit - AI Trading Bot for Prediction Markets
+# Docker Compose Configuration
+# =============================================================================
+# Usage:
+#   docker compose up -d              # Start with defaults (dry-run mode)
+#   docker compose --profile live up  # Start with live trading
+#   docker compose logs -f            # View logs
+#   docker compose down               # Stop services
+# =============================================================================
+
 services:
-  polybot:
-    build: .
+  # ---------------------------------------------------------------------------
+  # Main Trading Bot
+  # ---------------------------------------------------------------------------
+  probablyprofit:
+    build:
+      context: ..
+      dockerfile: probablyprofit/Dockerfile
     container_name: probablyprofit_bot
-    volumes:
-      - ./.env:/app/.env
-      - ./data:/app/data
     restart: unless-stopped
-    command: python main.py --strategy mean-reversion --agent openai --model gpt-4o
+    ports:
+      - "${WEB_DASHBOARD_PORT:-8000}:8000"
+    volumes:
+      - ../.env:/app/.env:ro
+      - ../data:/app/data
+      - ../logs:/app/logs
+    environment:
+      - ENABLE_WEB_DASHBOARD=true
+      - ENABLE_PERSISTENCE=true
+    command: >
+      python -m probablyprofit.main
+      --platform ${PLATFORM:-polymarket}
+      --strategy ${STRATEGY:-mean-reversion}
+      --agent ${AGENT:-openai}
+      --interval ${INTERVAL:-60}
+      --dry-run
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Paper Trading Mode (Safe Testing)
+  # ---------------------------------------------------------------------------
+  probablyprofit-paper:
+    build:
+      context: ..
+      dockerfile: probablyprofit/Dockerfile
+    container_name: probablyprofit_paper
+    profiles: ["paper"]
+    restart: unless-stopped
+    ports:
+      - "${WEB_DASHBOARD_PORT:-8001}:8000"
+    volumes:
+      - ../.env:/app/.env:ro
+      - ../data:/app/data
+      - ../logs:/app/logs
+    environment:
+      - ENABLE_WEB_DASHBOARD=true
+      - ENABLE_PERSISTENCE=true
+    command: >
+      python -m probablyprofit.main
+      --platform ${PLATFORM:-polymarket}
+      --strategy ${STRATEGY:-mean-reversion}
+      --agent ${AGENT:-openai}
+      --interval ${INTERVAL:-60}
+      --paper
+      --paper-capital ${PAPER_CAPITAL:-10000}
+
+  # ---------------------------------------------------------------------------
+  # Live Trading Mode (Real Money - USE WITH CAUTION)
+  # ---------------------------------------------------------------------------
+  probablyprofit-live:
+    build:
+      context: ..
+      dockerfile: probablyprofit/Dockerfile
+    container_name: probablyprofit_live
+    profiles: ["live"]
+    restart: unless-stopped
+    ports:
+      - "${WEB_DASHBOARD_PORT:-8000}:8000"
+    volumes:
+      - ../.env:/app/.env:ro
+      - ../data:/app/data
+      - ../logs:/app/logs
+    environment:
+      - ENABLE_WEB_DASHBOARD=true
+      - ENABLE_PERSISTENCE=true
+    command: >
+      python -m probablyprofit.main
+      --platform ${PLATFORM:-polymarket}
+      --strategy ${STRATEGY:-mean-reversion}
+      --agent ${AGENT:-openai}
+      --interval ${INTERVAL:-60}
+      --sizing ${SIZING:-kelly}
+      --kelly-fraction ${KELLY_FRACTION:-0.25}
+
+  # ---------------------------------------------------------------------------
+  # Ensemble Mode (Multiple AI Providers)
+  # ---------------------------------------------------------------------------
+  probablyprofit-ensemble:
+    build:
+      context: ..
+      dockerfile: probablyprofit/Dockerfile
+    container_name: probablyprofit_ensemble
+    profiles: ["ensemble"]
+    restart: unless-stopped
+    ports:
+      - "${WEB_DASHBOARD_PORT:-8000}:8000"
+    volumes:
+      - ../.env:/app/.env:ro
+      - ../data:/app/data
+      - ../logs:/app/logs
+    environment:
+      - ENABLE_WEB_DASHBOARD=true
+      - ENABLE_PERSISTENCE=true
+    command: >
+      python -m probablyprofit.main
+      --platform ${PLATFORM:-polymarket}
+      --strategy ${STRATEGY:-mean-reversion}
+      --agent ensemble
+      --ensemble-agents openai,gemini,anthropic
+      --voting ${VOTING:-majority}
+      --min-agreement ${MIN_AGREEMENT:-2}
+      --interval ${INTERVAL:-60}
+      --dry-run
+
+  # ---------------------------------------------------------------------------
+  # Backtest Mode (Historical Simulation)
+  # ---------------------------------------------------------------------------
+  probablyprofit-backtest:
+    build:
+      context: ..
+      dockerfile: probablyprofit/Dockerfile
+    container_name: probablyprofit_backtest
+    profiles: ["backtest"]
+    volumes:
+      - ../.env:/app/.env:ro
+      - ../data:/app/data
+    command: >
+      python -m probablyprofit.main
+      --strategy ${STRATEGY:-mean-reversion}
+      --agent ${AGENT:-openai}
+      --backtest
+      --backtest-days ${BACKTEST_DAYS:-30}
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  default:
+    name: probablyprofit_network
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  data:
+    driver: local
+  logs:
+    driver: local

@@ -379,13 +379,32 @@ class BaseAgent(ABC):
         """
         Main agent loop: observe → decide → act.
 
-        Runs continuously until stopped.
+        Runs continuously until stopped. Includes error recovery
+        with exponential backoff on repeated failures.
         """
         logger.info(f"[{self.name}] Starting agent loop (interval: {self.loop_interval}s)")
         self.running = True
 
+        # Error tracking for recovery
+        self._error_count = 0
+        self._consecutive_errors = 0
+        self._loop_count = 0
+        self._max_consecutive_errors = 10  # Stop after this many consecutive failures
+        self._base_backoff = 5.0  # Base backoff in seconds
+        self._max_backoff = 300.0  # Max backoff (5 minutes)
+
+        # Try to get recovery manager
+        recovery_manager = None
+        try:
+            from probablyprofit.utils.recovery import get_recovery_manager
+            recovery_manager = get_recovery_manager()
+        except ImportError:
+            pass
+
         try:
             while self.running:
+                self._loop_count += 1
+
                 try:
                     # Observe
                     observation = await self.observe()
@@ -397,12 +416,45 @@ class BaseAgent(ABC):
                     success = await self.act(decision)
 
                     if success:
-                        logger.info(f"[{self.name}] Loop iteration completed successfully")
+                        logger.info(f"[{self.name}] Loop iteration {self._loop_count} completed successfully")
+                        self._consecutive_errors = 0  # Reset on success
                     else:
-                        logger.warning(f"[{self.name}] Loop iteration failed")
+                        logger.warning(f"[{self.name}] Loop iteration {self._loop_count} failed")
+                        self._consecutive_errors += 1
+
+                    # Checkpoint periodically
+                    if recovery_manager and self._loop_count % 5 == 0:
+                        await recovery_manager.checkpoint(self)
 
                 except Exception as e:
-                    logger.error(f"[{self.name}] Error in agent loop: {e}")
+                    self._error_count += 1
+                    self._consecutive_errors += 1
+                    logger.error(
+                        f"[{self.name}] Error in loop iteration {self._loop_count}: {e} "
+                        f"(consecutive: {self._consecutive_errors})"
+                    )
+
+                    # Checkpoint on error
+                    if recovery_manager:
+                        await recovery_manager.checkpoint(self, force=True, error=e)
+
+                    # Check if we should stop
+                    if self._consecutive_errors >= self._max_consecutive_errors:
+                        logger.critical(
+                            f"[{self.name}] Too many consecutive errors ({self._consecutive_errors}). "
+                            f"Stopping agent to prevent further issues."
+                        )
+                        self.running = False
+                        break
+
+                    # Exponential backoff on errors
+                    backoff = min(
+                        self._base_backoff * (2 ** (self._consecutive_errors - 1)),
+                        self._max_backoff
+                    )
+                    logger.warning(f"[{self.name}] Backing off for {backoff:.1f}s before retry...")
+                    await asyncio.sleep(backoff)
+                    continue  # Skip normal sleep, we already waited
 
                 # Wait before next iteration
                 await asyncio.sleep(self.loop_interval)
@@ -411,10 +463,28 @@ class BaseAgent(ABC):
             logger.info(f"[{self.name}] Agent loop cancelled")
             self.running = False
 
+            # Final checkpoint on shutdown
+            if recovery_manager:
+                await recovery_manager.checkpoint(self, force=True)
+
     def stop(self) -> None:
         """Stop the agent loop."""
         logger.info(f"[{self.name}] Stopping agent...")
         self.running = False
+
+    def get_health_status(self) -> Dict[str, Any]:
+        """Get agent health status."""
+        return {
+            "name": self.name,
+            "running": self.running,
+            "loop_count": getattr(self, "_loop_count", 0),
+            "error_count": getattr(self, "_error_count", 0),
+            "consecutive_errors": getattr(self, "_consecutive_errors", 0),
+            "dry_run": self.dry_run,
+            "observations": len(self.memory.observations),
+            "decisions": len(self.memory.decisions),
+            "trades": len(self.memory.trades),
+        }
 
     async def run(self) -> None:
         """

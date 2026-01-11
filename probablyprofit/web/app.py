@@ -4,8 +4,11 @@ FastAPI Application
 Main FastAPI app for the probablyprofit dashboard.
 """
 
+import os
+from pathlib import Path
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 from dataclasses import dataclass
@@ -14,6 +17,9 @@ from datetime import datetime
 from probablyprofit.agent.base import BaseAgent
 from probablyprofit.web.api.routes import router as api_router
 from probablyprofit.web.api.websocket import websocket_endpoint
+
+# Path to React build
+STATIC_DIR = Path(__file__).parent / "static"
 
 
 @dataclass
@@ -61,11 +67,35 @@ def create_app() -> FastAPI:
     # WebSocket endpoint
     app.add_websocket_route("/ws", websocket_endpoint)
 
-    @app.get("/", response_class=HTMLResponse)
-    async def dashboard():
-        """Serve the dashboard UI."""
-        from probablyprofit.web.dashboard import DASHBOARD_HTML
-        return DASHBOARD_HTML
+    # Serve React app if built, otherwise fallback to simple HTML
+    if STATIC_DIR.exists() and (STATIC_DIR / "index.html").exists():
+        # Mount static assets
+        app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")
+
+        @app.get("/", response_class=HTMLResponse)
+        async def dashboard():
+            """Serve the React dashboard."""
+            return FileResponse(STATIC_DIR / "index.html")
+
+        @app.get("/{path:path}")
+        async def catch_all(path: str):
+            """Catch-all for React Router - serve index.html for unknown routes."""
+            # Don't catch API routes
+            if path.startswith("api/") or path.startswith("ws"):
+                return {"error": "Not found"}
+            # Check if it's a static file
+            file_path = STATIC_DIR / path
+            if file_path.exists() and file_path.is_file():
+                return FileResponse(file_path)
+            # Return React app for client-side routing
+            return FileResponse(STATIC_DIR / "index.html")
+    else:
+        # Fallback to simple HTML dashboard
+        @app.get("/", response_class=HTMLResponse)
+        async def dashboard():
+            """Serve the simple dashboard UI."""
+            from probablyprofit.web.dashboard import DASHBOARD_HTML
+            return DASHBOARD_HTML
 
     @app.get("/health")
     async def health():

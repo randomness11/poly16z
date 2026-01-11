@@ -137,6 +137,93 @@ DASHBOARD_HTML = '''<!DOCTYPE html>
                 <div class="text-gray-400 text-center py-4">No trades yet</div>
             </div>
         </div>
+
+        <!-- Risk Exposure Section -->
+        <div class="mt-6 glass rounded-xl p-6 card-gradient border border-white/10">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold">Portfolio Exposure</h2>
+                <button onclick="refreshExposure()" class="text-sm bg-blue-500/20 hover:bg-blue-500/30 px-3 py-1 rounded">
+                    Refresh
+                </button>
+            </div>
+
+            <!-- Warnings -->
+            <div id="exposure-warnings" class="mb-4 hidden">
+            </div>
+
+            <!-- Exposure Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white/5 rounded-lg p-3">
+                    <div class="text-gray-400 text-xs mb-1">Total Exposure</div>
+                    <div id="total-exposure" class="text-xl font-bold text-yellow-400">$0.00</div>
+                </div>
+                <div class="bg-white/5 rounded-lg p-3">
+                    <div class="text-gray-400 text-xs mb-1">Cash Balance</div>
+                    <div id="cash-balance" class="text-xl font-bold text-green-400">$0.00</div>
+                </div>
+                <div class="bg-white/5 rounded-lg p-3">
+                    <div class="text-gray-400 text-xs mb-1">Exposure %</div>
+                    <div id="exposure-pct" class="text-xl font-bold">0%</div>
+                </div>
+                <div class="bg-white/5 rounded-lg p-3">
+                    <div class="text-gray-400 text-xs mb-1">Daily Loss Used</div>
+                    <div id="daily-loss-used" class="text-xl font-bold">0%</div>
+                </div>
+            </div>
+
+            <!-- Correlation Groups -->
+            <div class="mb-6">
+                <h3 class="text-sm font-semibold text-gray-400 mb-3">Correlation Groups</h3>
+                <div id="correlation-groups" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div class="text-gray-500 text-sm">No correlated positions</div>
+                </div>
+            </div>
+
+            <!-- Exposure Breakdown Chart -->
+            <div class="h-48">
+                <canvas id="exposureChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Arbitrage Opportunities Section -->
+        <div class="mt-6 glass rounded-xl p-6 card-gradient border border-white/10">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold">⚡ Arbitrage Opportunities</h2>
+                <div class="flex items-center space-x-2">
+                    <span id="arb-status" class="text-xs text-gray-400">Not scanned</span>
+                    <button onclick="scanArbitrage()" id="arb-scan-btn" class="text-sm bg-purple-500/20 hover:bg-purple-500/30 px-3 py-1 rounded">
+                        Scan Markets
+                    </button>
+                </div>
+            </div>
+
+            <!-- Arbitrage Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white/5 rounded-lg p-3">
+                    <div class="text-gray-400 text-xs mb-1">Opportunities</div>
+                    <div id="arb-count" class="text-xl font-bold text-purple-400">0</div>
+                </div>
+                <div class="bg-white/5 rounded-lg p-3">
+                    <div class="text-gray-400 text-xs mb-1">Best Profit</div>
+                    <div id="arb-best-profit" class="text-xl font-bold text-green-400">0%</div>
+                </div>
+                <div class="bg-white/5 rounded-lg p-3">
+                    <div class="text-gray-400 text-xs mb-1">Matched Pairs</div>
+                    <div id="arb-pairs" class="text-xl font-bold text-blue-400">0</div>
+                </div>
+                <div class="bg-white/5 rounded-lg p-3">
+                    <div class="text-gray-400 text-xs mb-1">Avg Confidence</div>
+                    <div id="arb-confidence" class="text-xl font-bold">0%</div>
+                </div>
+            </div>
+
+            <!-- Opportunities List -->
+            <div id="arb-opportunities" class="space-y-3">
+                <div class="text-gray-500 text-sm text-center py-4">
+                    Click "Scan Markets" to detect arbitrage opportunities between Polymarket and Kalshi
+                </div>
+            </div>
+        </div>
     </main>
 
     <script>
@@ -276,11 +363,194 @@ DASHBOARD_HTML = '''<!DOCTYPE html>
             return `${h}h ${m}m ${s}s`;
         }
 
+        // Exposure chart setup
+        const exposureCtx = document.getElementById('exposureChart').getContext('2d');
+        const exposureChart = new Chart(exposureCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Cash', 'Positions'],
+                datasets: [{
+                    data: [100, 0],
+                    backgroundColor: ['#22c55e', '#eab308'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { color: '#9ca3af' }
+                    }
+                }
+            }
+        });
+
+        async function refreshExposure() {
+            try {
+                const res = await fetch('/api/exposure');
+                const data = await res.json();
+                updateExposure(data);
+            } catch (e) {
+                console.error('Failed to fetch exposure:', e);
+            }
+        }
+
+        function updateExposure(data) {
+            // Update stats
+            document.getElementById('total-exposure').textContent = `$${data.total_exposure.toFixed(2)}`;
+            document.getElementById('cash-balance').textContent = `$${data.cash_balance.toFixed(2)}`;
+
+            const exposurePct = data.risk_metrics.exposure_pct || 0;
+            const exposurePctEl = document.getElementById('exposure-pct');
+            exposurePctEl.textContent = `${exposurePct.toFixed(1)}%`;
+            exposurePctEl.className = `text-xl font-bold ${exposurePct > 80 ? 'text-red-400' : exposurePct > 50 ? 'text-yellow-400' : 'text-green-400'}`;
+
+            const dailyLossUsed = data.risk_metrics.daily_loss_limit_used || 0;
+            const dailyLossEl = document.getElementById('daily-loss-used');
+            dailyLossEl.textContent = `${dailyLossUsed.toFixed(0)}%`;
+            dailyLossEl.className = `text-xl font-bold ${dailyLossUsed > 75 ? 'text-red-400' : dailyLossUsed > 50 ? 'text-yellow-400' : 'text-green-400'}`;
+
+            // Update warnings
+            const warningsEl = document.getElementById('exposure-warnings');
+            if (data.warnings && data.warnings.length > 0) {
+                warningsEl.innerHTML = data.warnings.map(w =>
+                    `<div class="bg-red-500/20 border border-red-500/50 rounded px-3 py-2 text-sm text-red-300 mb-2">⚠️ ${w}</div>`
+                ).join('');
+                warningsEl.classList.remove('hidden');
+            } else {
+                warningsEl.classList.add('hidden');
+            }
+
+            // Update correlation groups
+            const groupsEl = document.getElementById('correlation-groups');
+            if (data.correlation_groups && data.correlation_groups.length > 0) {
+                groupsEl.innerHTML = data.correlation_groups.map(g => {
+                    const riskColor = g.risk_level === 'high' ? 'red' : g.risk_level === 'medium' ? 'yellow' : 'green';
+                    return `
+                        <div class="bg-${riskColor}-500/10 border border-${riskColor}-500/30 rounded-lg p-3">
+                            <div class="font-semibold text-sm capitalize">${g.group_name.replace('_', ' ')}</div>
+                            <div class="text-${riskColor}-400 text-lg font-bold">$${g.total_exposure.toFixed(2)}</div>
+                            <div class="text-gray-400 text-xs">${g.positions_count} positions</div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                groupsEl.innerHTML = '<div class="text-gray-500 text-sm">No correlated positions detected</div>';
+            }
+
+            // Update exposure chart
+            const categories = Object.keys(data.exposure_by_category || {});
+            if (categories.length > 0) {
+                exposureChart.data.labels = ['Cash', ...categories.map(c => c.replace('_', ' '))];
+                exposureChart.data.datasets[0].data = [
+                    data.cash_balance,
+                    ...categories.map(c => data.exposure_by_category[c])
+                ];
+                exposureChart.data.datasets[0].backgroundColor = [
+                    '#22c55e',
+                    '#eab308', '#3b82f6', '#a855f7', '#ef4444', '#f97316', '#14b8a6'
+                ].slice(0, categories.length + 1);
+            } else {
+                exposureChart.data.labels = ['Cash', 'Positions'];
+                exposureChart.data.datasets[0].data = [data.cash_balance, data.total_exposure];
+            }
+            exposureChart.update();
+        }
+
+        // Arbitrage functions
+        async function scanArbitrage() {
+            const btn = document.getElementById('arb-scan-btn');
+            const status = document.getElementById('arb-status');
+
+            btn.disabled = true;
+            btn.textContent = 'Scanning...';
+            status.textContent = 'Scanning markets...';
+
+            try {
+                const res = await fetch('/api/arbitrage/scan', { method: 'POST' });
+                const data = await res.json();
+                updateArbitrage(data);
+                status.textContent = `Last scan: ${new Date().toLocaleTimeString()}`;
+            } catch (e) {
+                console.error('Arbitrage scan failed:', e);
+                status.textContent = 'Scan failed';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Scan Markets';
+            }
+        }
+
+        function updateArbitrage(data) {
+            // Update stats
+            document.getElementById('arb-count').textContent = data.opportunities.length;
+            document.getElementById('arb-pairs').textContent = data.matched_pairs_count;
+
+            if (data.opportunities.length > 0) {
+                const bestProfit = Math.max(...data.opportunities.map(o => o.net_profit_pct));
+                document.getElementById('arb-best-profit').textContent = `${(bestProfit * 100).toFixed(1)}%`;
+
+                const avgConfidence = data.opportunities.reduce((sum, o) => sum + o.confidence, 0) / data.opportunities.length;
+                document.getElementById('arb-confidence').textContent = `${(avgConfidence * 100).toFixed(0)}%`;
+            } else {
+                document.getElementById('arb-best-profit').textContent = '0%';
+                document.getElementById('arb-confidence').textContent = '0%';
+            }
+
+            // Update opportunities list
+            const container = document.getElementById('arb-opportunities');
+            if (data.opportunities.length === 0) {
+                container.innerHTML = '<div class="text-gray-500 text-sm text-center py-4">No arbitrage opportunities found. Markets are efficiently priced.</div>';
+                return;
+            }
+
+            container.innerHTML = data.opportunities.map(opp => {
+                const profitColor = opp.net_profit_pct > 0.05 ? 'green' : opp.net_profit_pct > 0.02 ? 'yellow' : 'gray';
+                return `
+                    <div class="bg-white/5 rounded-lg p-4 border border-${profitColor}-500/30">
+                        <div class="flex items-start justify-between mb-2">
+                            <div class="flex-1">
+                                <div class="text-sm font-semibold text-${profitColor}-400">
+                                    ${(opp.net_profit_pct * 100).toFixed(1)}% Profit
+                                </div>
+                                <div class="text-xs text-gray-400 mt-1">
+                                    ${opp.polymarket_question.slice(0, 60)}...
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs bg-purple-500/20 px-2 py-1 rounded">
+                                    ${(opp.confidence * 100).toFixed(0)}% conf
+                                </div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-xs mt-3">
+                            <div class="bg-blue-500/10 rounded p-2">
+                                <div class="text-blue-400 font-medium">Buy ${opp.buy_side.toUpperCase()}</div>
+                                <div class="text-gray-300">${opp.buy_platform}</div>
+                                <div class="text-white font-bold">${(opp.buy_price * 100).toFixed(1)}¢</div>
+                            </div>
+                            <div class="bg-green-500/10 rounded p-2">
+                                <div class="text-green-400 font-medium">Buy ${opp.sell_side.toUpperCase()}</div>
+                                <div class="text-gray-300">${opp.sell_platform}</div>
+                                <div class="text-white font-bold">${(opp.sell_price * 100).toFixed(1)}¢</div>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-xs text-gray-400">
+                            Combined: ${(opp.combined_cost * 100).toFixed(1)}¢ → Guaranteed $1.00 payout
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
         // Initial fetch
         fetchData();
-        
+        refreshExposure();
+
         // Refresh every 30 seconds
         setInterval(fetchData, 30000);
+        setInterval(refreshExposure, 30000);
     </script>
 </body>
 </html>

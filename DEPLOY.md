@@ -1,89 +1,256 @@
-# Deploy to GitHub
+# probablyprofit Deployment Guide
 
-Your probablyprofit repository is ready to deploy! Follow these steps:
-
-## Option 1: Using GitHub CLI (Recommended)
+## Quick Start
 
 ```bash
-# Install GitHub CLI if you haven't (macOS)
-brew install gh
+# 1. Clone and setup
+git clone <repo-url>
+cd polymarket-ai-bot
 
-# Login to GitHub
-gh auth login
+# 2. Configure environment
+cp .env.example .env
+# Edit .env with your API keys
 
-# Create repository and push
-gh repo create probablyprofit --public --source=. --remote=origin --push
-
-# Done! Your repo is now at https://github.com/YOUR_USERNAME/probablyprofit
+# 3. Deploy (dry-run mode by default)
+./deploy.sh
 ```
 
-## Option 2: Using GitHub Web Interface
+## Deployment Modes
 
-### Step 1: Create Repository on GitHub
-
-1. Go to https://github.com/new
-2. Repository name: `probablyprofit`
-3. Description: `AI-powered trading bot framework for Polymarket`
-4. Set to **Public**
-5. **Do NOT** initialize with README (we already have one)
-6. Click "Create repository"
-
-### Step 2: Push Your Code
+### 1. Dry-Run Mode (Default)
+Safe mode - analyzes markets but doesn't execute trades.
 
 ```bash
-# Add GitHub as remote (replace YOUR_USERNAME)
-git remote add origin https://github.com/YOUR_USERNAME/probablyprofit.git
-
-# Push to GitHub
-git branch -M main
-git push -u origin main
+./deploy.sh
+# or
+docker compose -f probablyprofit/docker-compose.yml up -d
 ```
 
-## After Pushing
+Dashboard: http://localhost:8000
 
-Your repository will be live at: `https://github.com/YOUR_USERNAME/probablyprofit`
+### 2. Paper Trading Mode
+Simulates trades with virtual money. Perfect for testing strategies.
 
-### Recommended Next Steps
-
-1. **Add repository description** on GitHub:
-   - "AI-powered trading bot framework for Polymarket - inspired by a16z"
-
-2. **Add topics** to help people discover your repo:
-   - `polymarket`
-   - `trading-bot`
-   - `ai`
-   - `claude`
-   - `prediction-markets`
-   - `crypto`
-   - `a16z`
-   - `python`
-
-3. **Enable GitHub Actions** (optional):
-   - Can add automated testing later
-
-4. **Star your own repo** ⭐ to get started!
-
-## Share It
-
-Once deployed, share your repo:
-
-```markdown
-🚀 Just launched probablyprofit - an AI-powered framework for building Polymarket trading bots!
-
-Define your trading strategy in natural language, and let Claude handle the decision-making.
-
-✨ Features:
-- Natural language strategy prompts
-- Built-in risk management
-- News & social signal integration
-- Backtesting engine
-- 3 working example bots
-
-Check it out: https://github.com/YOUR_USERNAME/probablyprofit
-
-Built with @AnthropicAI Claude 💙
+```bash
+./deploy.sh paper
 ```
 
----
+Dashboard: http://localhost:8001
 
-**Note**: Make sure to update the repository URLs in `pyproject.toml` after creating the repo with your actual GitHub username!
+Configuration:
+```env
+PAPER_CAPITAL=10000  # Starting virtual capital
+```
+
+### 3. Live Trading Mode
+**REAL MONEY** - Use with caution!
+
+```bash
+./deploy.sh live
+```
+
+Requires confirmation and valid:
+- `PRIVATE_KEY` for Polymarket
+- `KALSHI_API_KEY_ID` and `KALSHI_PRIVATE_KEY_PATH` for Kalshi
+
+### 4. Ensemble Mode
+Uses multiple AI providers for consensus-based decisions.
+
+```bash
+./deploy.sh ensemble
+```
+
+Requires API keys for multiple providers (OpenAI, Anthropic, Google).
+
+### 5. Backtest Mode
+Historical simulation with synthetic data.
+
+```bash
+./deploy.sh backtest
+```
+
+## Configuration
+
+### Required Environment Variables
+
+For Polymarket:
+```env
+PRIVATE_KEY=your_polygon_private_key
+INITIAL_CAPITAL=1000.0
+```
+
+For Kalshi:
+```env
+KALSHI_API_KEY_ID=your_kalshi_key
+KALSHI_PRIVATE_KEY_PATH=/path/to/key.pem
+KALSHI_DEMO=true
+```
+
+For AI (at least one required):
+```env
+OPENAI_API_KEY=sk-...
+GOOGLE_API_KEY=...
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+### Optional Features
+
+```env
+# Web Dashboard
+ENABLE_WEB_DASHBOARD=true
+WEB_DASHBOARD_PORT=8000
+
+# Data Persistence
+ENABLE_PERSISTENCE=true
+
+# Intelligence Layer (enhanced analysis)
+PERPLEXITY_API_KEY=pplx-...
+TWITTER_BEARER_TOKEN=...
+REDDIT_CLIENT_ID=...
+REDDIT_CLIENT_SECRET=...
+```
+
+## Trading Configuration
+
+Override via environment or CLI:
+
+| Variable | CLI Flag | Options |
+|----------|----------|---------|
+| `PLATFORM` | `--platform` | polymarket, kalshi |
+| `STRATEGY` | `--strategy` | mean-reversion, momentum, value, contrarian, volatility, calendar, arbitrage, news, custom |
+| `AGENT` | `--agent` | openai, gemini, anthropic, ensemble, fallback |
+| `INTERVAL` | `--interval` | seconds between loops |
+| `SIZING` | `--sizing` | manual, fixed_pct, kelly, confidence_based, dynamic |
+
+## Commands
+
+```bash
+# Start (dry-run)
+./deploy.sh
+
+# Start (paper trading)
+./deploy.sh paper
+
+# Start (live trading)
+./deploy.sh live
+
+# Start (ensemble)
+./deploy.sh ensemble
+
+# Run backtest
+./deploy.sh backtest
+
+# Run locally (no Docker)
+./deploy.sh local
+
+# View logs
+./deploy.sh logs
+
+# Stop all services
+./deploy.sh stop
+
+# Build only
+./deploy.sh build
+```
+
+## Docker Commands
+
+```bash
+# Build image
+docker compose -f probablyprofit/docker-compose.yml build
+
+# Start specific profile
+docker compose -f probablyprofit/docker-compose.yml --profile paper up -d
+
+# View logs
+docker compose -f probablyprofit/docker-compose.yml logs -f
+
+# Stop
+docker compose -f probablyprofit/docker-compose.yml down
+
+# Shell into container
+docker exec -it probablyprofit_bot /bin/bash
+```
+
+## Local Development
+
+```bash
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Build frontend
+cd frontend && npm install && npm run build && cd ..
+
+# Run
+python -m probablyprofit.main --dry-run --strategy mean-reversion
+```
+
+## Architecture
+
+```
+probablyprofit/
+├── agent/              # AI agents (OpenAI, Gemini, Anthropic)
+├── api/                # Platform clients (Polymarket, Kalshi)
+├── arbitrage/          # Cross-platform arbitrage detection
+├── backtesting/        # Historical simulation
+├── intelligence/       # News & alpha signal sources
+├── resilience/         # Retry, circuit breaker, rate limiter
+├── risk/               # Risk management & position sizing
+├── storage/            # SQLite persistence
+├── trading/            # Paper trading engine
+└── web/                # FastAPI + React dashboard
+```
+
+## Monitoring
+
+The web dashboard provides:
+- Real-time status and P&L
+- Position tracking
+- Trade history
+- Risk exposure analysis
+- Arbitrage opportunity scanner
+- Paper trading portfolio
+
+## Troubleshooting
+
+### Container won't start
+```bash
+# Check logs
+docker compose -f probablyprofit/docker-compose.yml logs probablyprofit
+
+# Rebuild
+docker compose -f probablyprofit/docker-compose.yml build --no-cache
+```
+
+### API errors
+1. Verify API keys in `.env`
+2. Check rate limits (use `--interval 120` for slower polling)
+3. Enable fallback agent: `--agent fallback`
+
+### Frontend not loading
+```bash
+# Rebuild frontend
+cd frontend && npm run build && cd ..
+```
+
+## Health Check
+
+```bash
+# Check API status
+curl http://localhost:8000/api/status
+
+# Check health endpoint
+curl http://localhost:8000/health
+```
+
+## Security Notes
+
+- **NEVER** commit `.env` to version control
+- Use read-only volume mounts for `.env` in Docker
+- Run as non-root user (default in Dockerfile)
+- Enable `KALSHI_DEMO=true` for testing
+- Start with `--dry-run` always

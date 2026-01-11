@@ -16,7 +16,18 @@ from probablyprofit.agent.openai_agent import OpenAIAgent
 from probablyprofit.agent.gemini_agent import GeminiAgent
 from probablyprofit.agent.anthropic_agent import AnthropicAgent
 from probablyprofit.agent.ensemble import EnsembleAgent, VotingStrategy
-from probablyprofit.agent.strategy import MeanReversionStrategy, NewsTradingStrategy, CustomStrategy
+from probablyprofit.agent.fallback import FallbackAgent, create_fallback_agent
+from probablyprofit.agent.strategy import (
+    MeanReversionStrategy,
+    NewsTradingStrategy,
+    CustomStrategy,
+    MomentumStrategy,
+    ValueStrategy,
+    ContrarianStrategy,
+    VolatilityStrategy,
+    CalendarStrategy,
+    ArbitrageStrategy,
+)
 
 
 def parse_args():
@@ -26,29 +37,37 @@ def parse_args():
     parser.add_argument("--platform", type=str, choices=["polymarket", "kalshi"], default="polymarket",
                         help="Prediction market platform to use (default: polymarket)")
 
-    parser.add_argument("--strategy", type=str, choices=["mean-reversion", "news", "custom"], default="mean-reversion",
+    parser.add_argument("--strategy", type=str,
+                        choices=["mean-reversion", "news", "custom", "momentum", "value", "contrarian", "volatility", "calendar", "arbitrage"],
+                        default="mean-reversion",
                         help="Trading strategy to employ")
     parser.add_argument("--keywords", type=str, default="",
                         help="Comma-separated keywords for News/Custom strategy")
     parser.add_argument("--prompt-file", type=str, default="strategy.txt",
                         help="Path to custom strategy prompt file (for --strategy custom)")
-    parser.add_argument("--agent", type=str, choices=["openai", "gemini", "anthropic", "ensemble"], default="openai",
-                        help="AI provider to use (or 'ensemble' for multi-agent consensus)")
+    parser.add_argument("--agent", type=str, choices=["openai", "gemini", "anthropic", "ensemble", "fallback"], default="openai",
+                        help="AI provider to use ('ensemble' for consensus, 'fallback' for auto-failover)")
     parser.add_argument("--model", type=str, default="",
                         help="Specific model name (e.g. 'gpt-4o', 'o1-preview', 'gemini-1.5-pro')")
     parser.add_argument("--interval", type=int, default=60,
                         help="Loop interval in seconds")
     parser.add_argument("--dry-run", action="store_true",
                         help="Run without placing real trades (simulation mode)")
+    parser.add_argument("--paper", action="store_true",
+                        help="Paper trading mode - simulates trades with virtual money")
+    parser.add_argument("--paper-capital", type=float, default=10000.0,
+                        help="Initial capital for paper trading (default: 10000)")
     
     # Intelligence Layer arguments
     parser.add_argument("--news", action="store_true",
                         help="Enable news context via Perplexity API (requires PERPLEXITY_API_KEY)")
+    parser.add_argument("--alpha", action="store_true",
+                        help="Enable multi-source alpha signals (Twitter, Reddit, Google Trends, News)")
     parser.add_argument("--top-markets", type=int, default=3,
-                        help="Number of top markets to fetch news for (default: 3)")
+                        help="Number of top markets to fetch intel for (default: 3)")
 
     # Risk Management arguments
-    parser.add_argument("--sizing", type=str, choices=["manual", "fixed_pct", "kelly", "confidence_based"],
+    parser.add_argument("--sizing", type=str, choices=["manual", "fixed_pct", "kelly", "confidence_based", "dynamic"],
                         default="manual", help="Position sizing method (default: manual)")
     parser.add_argument("--kelly-fraction", type=float, default=0.25,
                         help="Kelly fraction multiplier (default: 0.25)")
@@ -123,6 +142,8 @@ async def main():
     agent_label = args.agent
     if args.agent == "ensemble":
         agent_label = f"ensemble ({args.voting} voting)"
+    elif args.agent == "fallback":
+        agent_label = "fallback (auto-failover)"
 
     logger.info(f"🚀 Starting ProbablyProfit Bot [Platform: {args.platform}] [Strategy: {args.strategy}] [Agent: {agent_label}]")
 
@@ -165,6 +186,24 @@ async def main():
     strategy = None
     if args.strategy == "mean-reversion":
         strategy = MeanReversionStrategy()
+    elif args.strategy == "momentum":
+        strategy = MomentumStrategy()
+        logger.info("📈 Using Momentum Strategy")
+    elif args.strategy == "value":
+        strategy = ValueStrategy()
+        logger.info("💎 Using Value Strategy")
+    elif args.strategy == "contrarian":
+        strategy = ContrarianStrategy()
+        logger.info("🔄 Using Contrarian Strategy")
+    elif args.strategy == "volatility":
+        strategy = VolatilityStrategy()
+        logger.info("⚡ Using Volatility Strategy")
+    elif args.strategy == "calendar":
+        strategy = CalendarStrategy()
+        logger.info("📅 Using Calendar Strategy")
+    elif args.strategy == "arbitrage":
+        strategy = ArbitrageStrategy()
+        logger.info("🎯 Using Arbitrage Strategy")
     elif args.strategy == "news":
         if not args.keywords:
             logger.error("❌ You must provide --keywords for news strategy")
@@ -176,10 +215,10 @@ async def main():
             logger.error(f"❌ Custom prompt file not found: {args.prompt_file}")
             print(f"💡 Tip: Create a {args.prompt_file} file with your strategy instructions.")
             return
-        
+
         with open(args.prompt_file, "r") as f:
             prompt_text = f.read()
-            
+
         keywords = [k.strip() for k in args.keywords.split(",")] if args.keywords else []
         strategy = CustomStrategy(prompt_text=prompt_text, keywords=keywords)
         logger.info(f"Loaded Custom Strategy from {args.prompt_file}")
@@ -190,12 +229,12 @@ async def main():
     # 4. Agent Setup
     agent = None
     strategy_prompt = strategy.get_prompt()
-    
+
     if args.agent == "ensemble":
         # Ensemble mode: create multiple agents
         ensemble_agent_types = [a.strip() for a in args.ensemble_agents.split(",")]
         logger.info(f"🤝 Creating ensemble with agents: {ensemble_agent_types}")
-        
+
         agents = []
         for agent_type in ensemble_agent_types:
             try:
@@ -204,12 +243,12 @@ async def main():
                 logger.info(f"  ✅ {agent_type} agent created")
             except ValueError as e:
                 logger.warning(f"  ⚠️  {agent_type}: {e}")
-        
+
         if len(agents) < 2:
             logger.error("❌ Ensemble mode requires at least 2 working agents")
             await client.close()
             return
-        
+
         # Map voting strategy
         voting_map = {
             "majority": VotingStrategy.MAJORITY,
@@ -218,7 +257,7 @@ async def main():
             "highest": VotingStrategy.HIGHEST_CONFIDENCE,
         }
         voting = voting_map.get(args.voting, VotingStrategy.MAJORITY)
-        
+
         agent = EnsembleAgent(
             client=client,
             risk_manager=risk,
@@ -229,6 +268,30 @@ async def main():
             strategy=strategy,
             dry_run=args.dry_run,
         )
+
+    elif args.agent == "fallback":
+        # Fallback mode: auto-failover between AI providers
+        logger.info("🔄 Creating fallback agent chain...")
+
+        try:
+            agent = create_fallback_agent(
+                client=client,
+                risk_manager=risk,
+                strategy_prompt=strategy_prompt,
+                openai_key=os.getenv("OPENAI_API_KEY"),
+                anthropic_key=os.getenv("ANTHROPIC_API_KEY"),
+                google_key=os.getenv("GOOGLE_API_KEY"),
+                dry_run=args.dry_run,
+                name="FallbackAgent",
+                loop_interval=args.interval,
+                strategy=strategy,
+            )
+            logger.info(f"✅ Fallback agent ready with {len(agent.agents)} providers")
+        except ValueError as e:
+            logger.error(f"❌ {e}")
+            await client.close()
+            return
+
     else:
         # Single agent mode
         try:
@@ -239,14 +302,17 @@ async def main():
             return
     
     # 4b. Wrap with Intelligence if enabled
-    if args.news and agent:
+    if (args.news or args.alpha) and agent:
         from probablyprofit.agent.intelligence import wrap_with_intelligence
         agent = wrap_with_intelligence(
             agent,
-            enable_news=True,
+            enable_news=args.news,
+            enable_alpha=args.alpha,
             top_n_markets=args.top_markets,
         )
-        if hasattr(agent, 'perplexity') and agent.perplexity:
+        if args.alpha:
+            logger.info(f"🎯 Multi-source alpha enabled for top {args.top_markets} markets")
+        elif hasattr(agent, 'perplexity') and agent.perplexity:
             logger.info(f"📰 News intelligence enabled for top {args.top_markets} markets")
 
     # 4c. Apply Risk Settings
@@ -255,6 +321,22 @@ async def main():
         agent.kelly_fraction = args.kelly_fraction
         if args.sizing != "manual":
             logger.info(f"⚖️  Auto-sizing enabled: {args.sizing} (Kelly fraction: {args.kelly_fraction})")
+
+    # 4d. Setup Paper Trading if enabled
+    paper_engine = None
+    if args.paper and agent:
+        from probablyprofit.trading.paper import PaperTradingEngine
+
+        # Create paper trading engine
+        paper_path = os.path.join(os.path.dirname(__file__), "..", "data", "paper_portfolio.json")
+        paper_engine = PaperTradingEngine(
+            initial_capital=args.paper_capital,
+            fee_rate=0.02,
+            persistence_path=paper_path,
+        )
+        agent.paper_engine = paper_engine
+        agent.dry_run = True  # Force dry run mode for paper trading
+        logger.info(f"📝 Paper trading enabled with ${args.paper_capital:,.2f} virtual capital")
 
     # 5. Run Backtest or Live Loop
     try:
