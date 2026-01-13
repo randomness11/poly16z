@@ -3,11 +3,13 @@ Example: Discord Notification Plugin
 
 Shows how to create a plugin that sends trade notifications to Discord.
 """
-from typing import Dict, Any
+
 import os
+from typing import Any, Dict
+
 from loguru import logger
 
-from probablyprofit.plugins import registry, PluginType
+from probablyprofit.plugins import PluginType, registry
 from probablyprofit.plugins.base import OutputPlugin, PluginConfig
 
 
@@ -16,31 +18,31 @@ from probablyprofit.plugins.base import OutputPlugin, PluginConfig
     PluginType.OUTPUT,
     version="1.0.0",
     author="community",
-    description="Send trade notifications to Discord webhook"
+    description="Send trade notifications to Discord webhook",
 )
 class DiscordNotificationPlugin(OutputPlugin):
     """
     Sends trading events to a Discord webhook.
-    
+
     Usage:
         Set DISCORD_WEBHOOK_URL in your .env file, then:
-        
+
         from probablyprofit.plugins.community.discord_plugin import DiscordNotificationPlugin
-        
+
         plugin = DiscordNotificationPlugin()
         await plugin.send("trade", {"market": "...", "action": "buy"})
     """
-    
+
     def __init__(self, config: PluginConfig = None, webhook_url: str = None):
         super().__init__(config)
         self.webhook_url = webhook_url or os.getenv("DISCORD_WEBHOOK_URL", "")
-    
+
     async def send(self, event_type: str, data: Dict[str, Any]) -> None:
         """Send notification to Discord."""
         if not self.webhook_url:
             logger.debug("Discord webhook URL not configured, skipping")
             return
-        
+
         # Format message based on event type
         if event_type == "trade":
             emoji = "📈" if data.get("action") == "buy" else "📉"
@@ -60,27 +62,25 @@ class DiscordNotificationPlugin(OutputPlugin):
         else:
             title = f"📢 {event_type.title()}"
             description = str(data)
-        
+
         payload = {
-            "embeds": [{
-                "title": title,
-                "description": description,
-                "color": self._get_color(event_type)
-            }]
+            "embeds": [
+                {"title": title, "description": description, "color": self._get_color(event_type)}
+            ]
         }
-        
+
         # In production, you'd POST to the webhook
         # import httpx
         # async with httpx.AsyncClient() as client:
         #     await client.post(self.webhook_url, json=payload)
-        
+
         logger.info(f"[Discord] Would send: {title}")
-    
+
     def _get_color(self, event_type: str) -> int:
         """Get Discord embed color based on event type."""
         colors = {
-            "trade": 0x00FF00,   # Green
-            "error": 0xFF0000,   # Red
-            "alert": 0xFFFF00,   # Yellow
+            "trade": 0x00FF00,  # Green
+            "error": 0xFF0000,  # Red
+            "alert": 0xFFFF00,  # Yellow
         }
         return colors.get(event_type, 0x0099FF)  # Default blue

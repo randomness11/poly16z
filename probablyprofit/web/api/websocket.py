@@ -4,9 +4,10 @@ WebSocket Manager
 Manages WebSocket connections for real-time updates.
 """
 
-from fastapi import WebSocket, WebSocketDisconnect
-from typing import Set
 import json
+from typing import Set
+
+from fastapi import WebSocket, WebSocketDisconnect
 from loguru import logger
 
 
@@ -75,6 +76,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 # Event broadcasting functions (called from agent loop)
+
 
 async def broadcast_trade(trade: dict):
     """Broadcast new trade event."""

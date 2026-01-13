@@ -5,14 +5,15 @@ Simulates trading strategies on historical data.
 """
 
 import asyncio
-from typing import List, Dict, Any, Optional
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 import pandas as pd
 from loguru import logger
 from pydantic import BaseModel
 
+from probablyprofit.agent.base import BaseAgent, Decision, Observation
 from probablyprofit.api.client import Market, Order, Position
-from probablyprofit.agent.base import BaseAgent, Observation, Decision
 from probablyprofit.risk.manager import RiskManager
 
 
@@ -115,12 +116,14 @@ class BacktestEngine:
 
             # Record equity
             total_equity = self._calculate_total_equity(markets)
-            self.equity_history.append({
-                "timestamp": timestamp,
-                "equity": total_equity,
-                "cash": self.current_capital,
-                "positions_value": total_equity - self.current_capital,
-            })
+            self.equity_history.append(
+                {
+                    "timestamp": timestamp,
+                    "equity": total_equity,
+                    "cash": self.current_capital,
+                    "positions_value": total_equity - self.current_capital,
+                }
+            )
 
         # Calculate final metrics
         result = self._calculate_results(timestamps[0], timestamps[-1])
@@ -148,10 +151,7 @@ class BacktestEngine:
             return
 
         # Find the market
-        market = next(
-            (m for m in markets if m.condition_id == decision.market_id),
-            None
-        )
+        market = next((m for m in markets if m.condition_id == decision.market_id), None)
 
         if not market:
             return
@@ -209,7 +209,9 @@ class BacktestEngine:
                 )
                 self.trades.append(trade)
 
-                logger.debug(f"Executed SELL: {position.size} @ ${decision.price} (P&L: ${pnl:+.2f})")
+                logger.debug(
+                    f"Executed SELL: {position.size} @ ${decision.price} (P&L: ${pnl:+.2f})"
+                )
 
     def _calculate_total_equity(
         self,
@@ -228,10 +230,7 @@ class BacktestEngine:
 
         for position in self.positions.values():
             # Find current market price
-            market = next(
-                (m for m in markets if m.condition_id == position.market_id),
-                None
-            )
+            market = next((m for m in markets if m.condition_id == position.market_id), None)
 
             if market and market.outcome_prices:
                 current_price = market.outcome_prices[0]  # Simplified
@@ -254,10 +253,12 @@ class BacktestEngine:
         Returns:
             BacktestResult object
         """
-        final_capital = self.equity_history[-1]["equity"] if self.equity_history else self.initial_capital
+        final_capital = (
+            self.equity_history[-1]["equity"] if self.equity_history else self.initial_capital
+        )
 
         from probablyprofit.backtesting.metrics import PerformanceMetrics
-        
+
         # Prepare data for metrics
         trade_dicts = [
             {
@@ -265,19 +266,19 @@ class BacktestEngine:
                 "side": t.side,
                 "size": t.size,
                 "price": t.price,
-                "timestamp": getattr(t, "timestamp", None)
+                "timestamp": getattr(t, "timestamp", None),
             }
             for t in self.trades
         ]
-        
+
         metrics = PerformanceMetrics.calculate_all_metrics(self.equity_history, trade_dicts)
-        
+
         # Calculate winning/losing trades manually for count if not in metrics
         # (The metrics class does return win_rate/total_trades/profit_factor)
-        
+
         # Helper to get return
         total_return = final_capital - self.initial_capital
-        
+
         return BacktestResult(
             start_time=start_time,
             end_time=end_time,
@@ -325,7 +326,7 @@ class BacktestEngine:
         # Calculate returns
         returns = []
         for i in range(1, len(self.equity_history)):
-            prev_equity = self.equity_history[i-1]["equity"]
+            prev_equity = self.equity_history[i - 1]["equity"]
             curr_equity = self.equity_history[i]["equity"]
             ret = (curr_equity - prev_equity) / prev_equity
             returns.append(ret)
@@ -335,6 +336,7 @@ class BacktestEngine:
 
         # Calculate Sharpe
         import numpy as np
+
         mean_return = np.mean(returns)
         std_return = np.std(returns)
 

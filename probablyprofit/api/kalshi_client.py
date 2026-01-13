@@ -8,44 +8,44 @@ Kalshi uses RSA key authentication and prices in cents (1-99).
 """
 
 import asyncio
-import time
 import base64
 import hashlib
+import time
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import httpx
 from loguru import logger
 from pydantic import BaseModel, Field
 
 try:
+    from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import padding, rsa
-    from cryptography.hazmat.backends import default_backend
+
     CRYPTO_AVAILABLE = True
 except ImportError:
     CRYPTO_AVAILABLE = False
     logger.debug("cryptography not installed - RSA signing unavailable")
 
 try:
-    from kalshi_python_async import Configuration, KalshiClient as KalshiSDK
+    from kalshi_python_async import Configuration
+    from kalshi_python_async import KalshiClient as KalshiSDK
+
     SDK_AVAILABLE = True
 except ImportError:
     Configuration = None
     KalshiSDK = None
     SDK_AVAILABLE = False
 
-from probablyprofit.api.exceptions import (
-    APIException,
-    NetworkException,
-    AuthenticationException,
-    RateLimitException,
-    ValidationException,
-    OrderException,
-    OrderNotFoundError,
-)
+from probablyprofit.api.exceptions import (APIException,
+                                           AuthenticationException,
+                                           NetworkException, OrderException,
+                                           OrderNotFoundError,
+                                           RateLimitException,
+                                           ValidationException)
 from probablyprofit.config import get_config
 
 
@@ -979,7 +979,8 @@ class KalshiClient:
                     ticker=pos_info.get("ticker", ""),
                     side="yes" if pos_info.get("position", 0) > 0 else "no",
                     position=pos_info.get("position", 0),
-                    avg_price=pos_info.get("market_exposure", 0) / max(abs(pos_info.get("position", 1)), 1),
+                    avg_price=pos_info.get("market_exposure", 0)
+                    / max(abs(pos_info.get("position", 1)), 1),
                     current_price=current_price,
                     market_exposure=pos_info.get("market_exposure", 0),
                     realized_pnl=pos_info.get("realized_pnl", 0),
@@ -1052,7 +1053,8 @@ class KalshiClient:
 
         query_lower = query.lower()
         matches = [
-            m for m in all_markets
+            m
+            for m in all_markets
             if query_lower in m.question.lower()
             or query_lower in (m.description or "").lower()
             or query_lower in m.ticker.lower()

@@ -4,9 +4,10 @@ Database Models
 SQLModel ORM models for persistent storage of trading data.
 """
 
-from sqlmodel import SQLModel, Field
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from sqlmodel import Field, SQLModel
 
 
 class TradeRecord(SQLModel, table=True):

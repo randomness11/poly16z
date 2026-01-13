@@ -1,10 +1,13 @@
 """
 Tests for the Polymarket API client.
 """
-import pytest
+
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-from probablyprofit.api.client import PolymarketClient, Market, Order, Position
+
+import pytest
+
+from probablyprofit.api.client import Market, Order, PolymarketClient, Position
 from probablyprofit.api.exceptions import ValidationException
 
 
@@ -23,7 +26,7 @@ class TestMarketDataclass:
             outcomes=["Yes", "No"],
             outcome_prices=[0.65, 0.35],
             volume=10000.0,
-            liquidity=5000.0
+            liquidity=5000.0,
         )
         assert market.condition_id == "0x123"
         assert market.question == "Will it rain tomorrow?"
@@ -33,13 +36,7 @@ class TestMarketDataclass:
 
 class TestOrderDataclass:
     def test_order_creation(self):
-        order = Order(
-            market_id="0x123",
-            outcome="Yes",
-            side="BUY",
-            size=100.0,
-            price=0.5
-        )
+        order = Order(market_id="0x123", outcome="Yes", side="BUY", size=100.0, price=0.5)
         assert order.market_id == "0x123"
         assert order.status == "pending"
         assert order.filled_size == 0.0
@@ -48,11 +45,7 @@ class TestOrderDataclass:
 class TestPositionDataclass:
     def test_position_value(self):
         position = Position(
-            market_id="0x123",
-            outcome="Yes",
-            size=100.0,
-            avg_price=0.5,
-            current_price=0.7
+            market_id="0x123", outcome="Yes", size=100.0, avg_price=0.5, current_price=0.7
         )
         assert position.value == pytest.approx(70.0)  # 100 * 0.7
         assert position.unrealized_pnl == pytest.approx(20.0)  # (0.7 - 0.5) * 100

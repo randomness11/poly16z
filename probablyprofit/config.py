@@ -8,12 +8,12 @@ Handles loading, saving, and validating configuration from multiple sources:
 """
 
 import os
-import yaml
-from pathlib import Path
-from typing import Optional, Dict, Any, List
 from dataclasses import dataclass, field
-from dotenv import load_dotenv
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
+import yaml
+from dotenv import load_dotenv
 
 # Config directory
 CONFIG_DIR = Path.home() / ".probablyprofit"
@@ -24,6 +24,7 @@ CREDENTIALS_FILE = CONFIG_DIR / "credentials.yaml"
 @dataclass
 class AIProvider:
     """Configuration for an AI provider."""
+
     name: str
     api_key: Optional[str] = None
     model: str = ""
@@ -33,6 +34,7 @@ class AIProvider:
 @dataclass
 class WalletConfig:
     """Wallet configuration."""
+
     private_key: Optional[str] = None
     platform: str = "polymarket"  # polymarket or kalshi
 
@@ -40,6 +42,7 @@ class WalletConfig:
 @dataclass
 class APIConfig:
     """API and network configuration."""
+
     # Timeouts (seconds)
     http_timeout: float = 30.0
     websocket_timeout: float = 60.0
@@ -67,6 +70,7 @@ class APIConfig:
 @dataclass
 class AgentConfig:
     """Agent loop configuration."""
+
     # Loop settings
     default_loop_interval: int = 60
     max_consecutive_errors: int = 10
@@ -86,6 +90,7 @@ class AgentConfig:
 @dataclass
 class RiskConfig:
     """Risk management configuration."""
+
     # Position limits
     max_position_pct: float = 0.10
     max_single_trade: float = 50.0
@@ -104,6 +109,7 @@ class RiskConfig:
 @dataclass
 class Config:
     """Main configuration object."""
+
     # AI Providers
     openai_api_key: Optional[str] = None
     openai_model: str = "gpt-4o"
@@ -300,42 +306,86 @@ def load_config() -> Config:
             config.max_daily_loss = risk.get("max_daily_loss", config.max_daily_loss)
 
             # Risk sub-config
-            config.risk.max_position_pct = risk.get("max_position_pct", config.risk.max_position_pct)
-            config.risk.max_single_trade = risk.get("max_single_trade", config.risk.max_single_trade)
-            config.risk.max_daily_loss_pct = risk.get("max_daily_loss_pct", config.risk.max_daily_loss_pct)
-            config.risk.max_total_exposure_pct = risk.get("max_total_exposure_pct", config.risk.max_total_exposure_pct)
+            config.risk.max_position_pct = risk.get(
+                "max_position_pct", config.risk.max_position_pct
+            )
+            config.risk.max_single_trade = risk.get(
+                "max_single_trade", config.risk.max_single_trade
+            )
+            config.risk.max_daily_loss_pct = risk.get(
+                "max_daily_loss_pct", config.risk.max_daily_loss_pct
+            )
+            config.risk.max_total_exposure_pct = risk.get(
+                "max_total_exposure_pct", config.risk.max_total_exposure_pct
+            )
             config.risk.kelly_fraction = risk.get("kelly_fraction", config.risk.kelly_fraction)
-            config.risk.min_confidence_to_trade = risk.get("min_confidence_to_trade", config.risk.min_confidence_to_trade)
-            config.risk.default_stop_loss_pct = risk.get("default_stop_loss_pct", config.risk.default_stop_loss_pct)
-            config.risk.default_take_profit_pct = risk.get("default_take_profit_pct", config.risk.default_take_profit_pct)
+            config.risk.min_confidence_to_trade = risk.get(
+                "min_confidence_to_trade", config.risk.min_confidence_to_trade
+            )
+            config.risk.default_stop_loss_pct = risk.get(
+                "default_stop_loss_pct", config.risk.default_stop_loss_pct
+            )
+            config.risk.default_take_profit_pct = risk.get(
+                "default_take_profit_pct", config.risk.default_take_profit_pct
+            )
 
             # API settings
             api = data.get("api", {})
             config.api.http_timeout = api.get("http_timeout", config.api.http_timeout)
-            config.api.websocket_timeout = api.get("websocket_timeout", config.api.websocket_timeout)
-            config.api.polymarket_rate_limit_calls = api.get("rate_limit_calls", config.api.polymarket_rate_limit_calls)
-            config.api.polymarket_rate_limit_period = api.get("rate_limit_period", config.api.polymarket_rate_limit_period)
-            config.api.circuit_breaker_threshold = api.get("circuit_breaker_threshold", config.api.circuit_breaker_threshold)
-            config.api.circuit_breaker_timeout = api.get("circuit_breaker_timeout", config.api.circuit_breaker_timeout)
-            config.api.retry_max_attempts = api.get("retry_max_attempts", config.api.retry_max_attempts)
+            config.api.websocket_timeout = api.get(
+                "websocket_timeout", config.api.websocket_timeout
+            )
+            config.api.polymarket_rate_limit_calls = api.get(
+                "rate_limit_calls", config.api.polymarket_rate_limit_calls
+            )
+            config.api.polymarket_rate_limit_period = api.get(
+                "rate_limit_period", config.api.polymarket_rate_limit_period
+            )
+            config.api.circuit_breaker_threshold = api.get(
+                "circuit_breaker_threshold", config.api.circuit_breaker_threshold
+            )
+            config.api.circuit_breaker_timeout = api.get(
+                "circuit_breaker_timeout", config.api.circuit_breaker_timeout
+            )
+            config.api.retry_max_attempts = api.get(
+                "retry_max_attempts", config.api.retry_max_attempts
+            )
             config.api.retry_base_delay = api.get("retry_base_delay", config.api.retry_base_delay)
             config.api.retry_max_delay = api.get("retry_max_delay", config.api.retry_max_delay)
             config.api.market_cache_ttl = api.get("market_cache_ttl", config.api.market_cache_ttl)
-            config.api.market_cache_max_size = api.get("market_cache_max_size", config.api.market_cache_max_size)
+            config.api.market_cache_max_size = api.get(
+                "market_cache_max_size", config.api.market_cache_max_size
+            )
             config.api.price_cache_ttl = api.get("price_cache_ttl", config.api.price_cache_ttl)
-            config.api.positions_cache_max_size = api.get("positions_cache_max_size", config.api.positions_cache_max_size)
+            config.api.positions_cache_max_size = api.get(
+                "positions_cache_max_size", config.api.positions_cache_max_size
+            )
 
             # Agent settings
             agent = data.get("agent", {})
-            config.agent.default_loop_interval = agent.get("loop_interval", config.agent.default_loop_interval)
-            config.agent.max_consecutive_errors = agent.get("max_consecutive_errors", config.agent.max_consecutive_errors)
+            config.agent.default_loop_interval = agent.get(
+                "loop_interval", config.agent.default_loop_interval
+            )
+            config.agent.max_consecutive_errors = agent.get(
+                "max_consecutive_errors", config.agent.max_consecutive_errors
+            )
             config.agent.base_backoff = agent.get("base_backoff", config.agent.base_backoff)
             config.agent.max_backoff = agent.get("max_backoff", config.agent.max_backoff)
-            config.agent.memory_max_observations = agent.get("memory_max_observations", config.agent.memory_max_observations)
-            config.agent.memory_max_decisions = agent.get("memory_max_decisions", config.agent.memory_max_decisions)
-            config.agent.memory_max_trades = agent.get("memory_max_trades", config.agent.memory_max_trades)
-            config.agent.checkpoint_interval = agent.get("checkpoint_interval", config.agent.checkpoint_interval)
-            config.agent.risk_save_interval = agent.get("risk_save_interval", config.agent.risk_save_interval)
+            config.agent.memory_max_observations = agent.get(
+                "memory_max_observations", config.agent.memory_max_observations
+            )
+            config.agent.memory_max_decisions = agent.get(
+                "memory_max_decisions", config.agent.memory_max_decisions
+            )
+            config.agent.memory_max_trades = agent.get(
+                "memory_max_trades", config.agent.memory_max_trades
+            )
+            config.agent.checkpoint_interval = agent.get(
+                "checkpoint_interval", config.agent.checkpoint_interval
+            )
+            config.agent.risk_save_interval = agent.get(
+                "risk_save_interval", config.agent.risk_save_interval
+            )
 
         except Exception:
             pass
@@ -405,6 +455,7 @@ def validate_api_key(provider: str, key: str) -> bool:
     try:
         if provider == "openai":
             import openai
+
             client = openai.OpenAI(api_key=key)
             # Simple models list call to validate
             client.models.list()
@@ -412,6 +463,7 @@ def validate_api_key(provider: str, key: str) -> bool:
 
         elif provider == "anthropic":
             import anthropic
+
             client = anthropic.Anthropic(api_key=key)
             # Count tokens is a lightweight validation call
             client.count_tokens("test")
@@ -419,6 +471,7 @@ def validate_api_key(provider: str, key: str) -> bool:
 
         elif provider == "google":
             import google.generativeai as genai
+
             genai.configure(api_key=key)
             # List models to validate
             list(genai.list_models())

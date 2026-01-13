@@ -6,8 +6,9 @@ Provides risk management primitives for safe trading.
 
 import asyncio
 import threading
-from typing import Dict, List, Optional
 from dataclasses import dataclass
+from typing import Dict, List, Optional
+
 from loguru import logger
 from pydantic import BaseModel
 
@@ -125,9 +126,7 @@ class RiskManager:
 
         # Check max positions
         if len(self.open_positions) >= self.limits.max_positions:
-            logger.warning(
-                f"Already at max positions ({self.limits.max_positions})"
-            )
+            logger.warning(f"Already at max positions ({self.limits.max_positions})")
             return False
 
         # Check daily loss limit
@@ -141,8 +140,7 @@ class RiskManager:
         # Check capital
         if position_value > self.current_capital * 0.5:
             logger.warning(
-                f"Position ${position_value:.2f} is >50% of capital "
-                f"${self.current_capital:.2f}"
+                f"Position ${position_value:.2f} is >50% of capital " f"${self.current_capital:.2f}"
             )
             return False
 
@@ -156,38 +154,38 @@ class RiskManager:
     ) -> float:
         """
         Calculate Kelly criterion position size.
-        
+
         Args:
             win_prob: Probability of winning (0-1)
             price: Entry price (0-1)
             fraction: Kelly fraction (default 0.25 for Quarter Kelly)
-            
+
         Returns:
             Position size in shares
         """
         if price <= 0 or price >= 1:
             return 0.0
-            
+
         # Kelly Formula: f = p - (1-p)/b
         # where b is net odds received = (1-price)/price
         loss_prob = 1 - win_prob
         net_odds = (1 - price) / price
-        
+
         if net_odds == 0:
             return 0.0
-            
+
         kelly_pct = win_prob - (loss_prob / net_odds)
-        
+
         # Apply fractional Kelly (e.g. Quarter Kelly) for safety
         adjusted_pct = kelly_pct * fraction
-        
+
         # Clamp between 0 and max position size %
         # We also respect the global max_position_size in calculate_position_size
         safe_pct = max(0.0, adjusted_pct)
-        
+
         position_value = self.current_capital * safe_pct
         size = position_value / price
-        
+
         return size
 
     def calculate_position_size(
@@ -240,8 +238,7 @@ class RiskManager:
         size = min(size, max_size)
 
         logger.debug(
-            f"Position size calculated: {size:.2f} shares "
-            f"(${size * price:.2f}) using {method}"
+            f"Position size calculated: {size:.2f} shares " f"(${size * price:.2f}) using {method}"
         )
 
         return size
@@ -312,11 +309,7 @@ class RiskManager:
 
         # Combine all factors
         combined_factor = (
-            confidence_factor *
-            volatility_factor *
-            streak_factor *
-            perf_factor *
-            capital_factor
+            confidence_factor * volatility_factor * streak_factor * perf_factor * capital_factor
         )
 
         # Apply to base size
@@ -361,10 +354,7 @@ class RiskManager:
         loss_pct = abs(pnl) / (size * entry_price)
 
         if pnl < 0 and loss_pct >= stop_loss_pct:
-            logger.warning(
-                f"Stop-loss triggered: {loss_pct:.1%} loss "
-                f"(${pnl:.2f})"
-            )
+            logger.warning(f"Stop-loss triggered: {loss_pct:.1%} loss " f"(${pnl:.2f})")
             return True
 
         return False
@@ -395,10 +385,7 @@ class RiskManager:
         profit_pct = pnl / (size * entry_price)
 
         if pnl > 0 and profit_pct >= take_profit_pct:
-            logger.info(
-                f"Take-profit triggered: {profit_pct:.1%} profit "
-                f"(${pnl:.2f})"
-            )
+            logger.info(f"Take-profit triggered: {profit_pct:.1%} profit " f"(${pnl:.2f})")
             return True
 
         return False
@@ -432,10 +419,7 @@ class RiskManager:
             self.current_capital += pnl
             self.daily_pnl += pnl
 
-        logger.info(
-            f"Trade recorded: {size:+.2f} shares @ ${price:.4f} "
-            f"(P&L: ${pnl:+.2f})"
-        )
+        logger.info(f"Trade recorded: {size:+.2f} shares @ ${price:.4f} " f"(P&L: ${pnl:+.2f})")
 
     def update_position(
         self,
@@ -513,9 +497,10 @@ class RiskManager:
         import json
 
         try:
+            from sqlmodel import select
+
             from probablyprofit.storage.database import get_db_manager
             from probablyprofit.storage.models import RiskStateRecord
-            from sqlmodel import select
 
             db = get_db_manager()
 
@@ -545,8 +530,7 @@ class RiskManager:
             async with db.get_session() as session:
                 # Mark all previous records as not latest
                 stmt = select(RiskStateRecord).where(
-                    RiskStateRecord.agent_name == agent_name,
-                    RiskStateRecord.is_latest == True
+                    RiskStateRecord.agent_name == agent_name, RiskStateRecord.is_latest == True
                 )
                 result = await session.execute(stmt)
                 old_records = result.scalars().all()
@@ -577,17 +561,22 @@ class RiskManager:
         import json
 
         try:
+            from sqlmodel import select
+
             from probablyprofit.storage.database import get_db_manager
             from probablyprofit.storage.models import RiskStateRecord
-            from sqlmodel import select
 
             db = get_db_manager()
 
             async with db.get_session() as session:
-                stmt = select(RiskStateRecord).where(
-                    RiskStateRecord.agent_name == agent_name,
-                    RiskStateRecord.is_latest == True
-                ).order_by(RiskStateRecord.timestamp.desc()).limit(1)
+                stmt = (
+                    select(RiskStateRecord)
+                    .where(
+                        RiskStateRecord.agent_name == agent_name, RiskStateRecord.is_latest == True
+                    )
+                    .order_by(RiskStateRecord.timestamp.desc())
+                    .limit(1)
+                )
 
                 result = await session.execute(stmt)
                 record = result.scalar_one_or_none()

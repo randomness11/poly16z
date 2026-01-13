@@ -1,26 +1,33 @@
 import pytest
-from probablyprofit.risk.manager import RiskManager, RiskLimits
+
+from probablyprofit.risk.manager import RiskLimits, RiskManager
+
 
 @pytest.fixture
 def risk_manager():
     return RiskManager(initial_capital=1000.0)
 
+
 def test_initialization(risk_manager):
     assert risk_manager.current_capital == 1000.0
     assert risk_manager.current_exposure == 0.0
 
+
 def test_can_open_position_valid(risk_manager):
     # Valid trade: $50 size, well within limits
     assert risk_manager.can_open_position(size=100, price=0.5) is True
+
 
 def test_can_open_position_size_limit(risk_manager):
     # Default max position size is 100.0
     # Try to open $200 position
     assert risk_manager.can_open_position(size=400, price=0.5) is False
 
+
 def test_can_open_position_daily_loss(risk_manager):
-    risk_manager.daily_pnl = -300.0 # Exceeds default max daily loss of 200
+    risk_manager.daily_pnl = -300.0  # Exceeds default max daily loss of 200
     assert risk_manager.can_open_position(size=10, price=0.5) is False
+
 
 def test_position_sizing_kelly(risk_manager):
     # Price 0.5 (odds = 1.0), Confidence 0.6 (60%)
@@ -49,13 +56,15 @@ def test_position_sizing_kelly(risk_manager):
     )
     assert size_half == pytest.approx(200.0, rel=1e-9)
 
+
 def test_stop_loss(risk_manager):
     # Entry 0.5, Current 0.3. Loss = 0.2. % Loss = 0.2/0.5 = 40%
     # Default stop loss is 20%
     assert risk_manager.should_stop_loss(entry_price=0.5, current_price=0.3, size=10) is True
-    
+
     # Entry 0.5, Current 0.45. Loss = 0.05. % Loss = 10%
     assert risk_manager.should_stop_loss(entry_price=0.5, current_price=0.45, size=10) is False
+
 
 def test_take_profit(risk_manager):
     # Entry 0.5, Current 0.8. Profit = 0.3. % Profit = 60%

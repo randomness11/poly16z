@@ -7,11 +7,12 @@ The brain that synthesizes Twitter, Reddit, Google Trends, and news.
 
 import asyncio
 import os
-from typing import Any, Dict, List, Optional
-from datetime import datetime
 from dataclasses import dataclass
-from pydantic import BaseModel
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 from loguru import logger
+from pydantic import BaseModel
 
 
 class AlphaSignal(BaseModel):
@@ -138,6 +139,7 @@ class SignalAggregator:
         # Twitter (optional - uses scraping fallback)
         try:
             from probablyprofit.sources.twitter import TwitterClient
+
             self._twitter = TwitterClient(bearer_token=twitter_token)
             logger.info("✅ Twitter source enabled")
         except Exception as e:
@@ -146,6 +148,7 @@ class SignalAggregator:
         # Reddit (always available - no auth needed)
         try:
             from probablyprofit.sources.reddit import RedditClient
+
             self._reddit = RedditClient()
             logger.info("✅ Reddit source enabled")
         except Exception as e:
@@ -154,6 +157,7 @@ class SignalAggregator:
         # Google Trends (always available - no auth needed)
         try:
             from probablyprofit.sources.trends import GoogleTrendsClient
+
             self._trends = GoogleTrendsClient()
             logger.info("✅ Google Trends source enabled")
         except Exception as e:
@@ -163,6 +167,7 @@ class SignalAggregator:
         if perplexity_key:
             try:
                 from probablyprofit.sources.perplexity import PerplexityClient
+
                 self._perplexity = PerplexityClient(api_key=perplexity_key)
                 logger.info("✅ Perplexity news source enabled")
             except Exception as e:
@@ -172,12 +177,14 @@ class SignalAggregator:
 
     def _count_sources(self) -> int:
         """Count available sources."""
-        return sum([
-            self._twitter is not None,
-            self._reddit is not None,
-            self._trends is not None,
-            self._perplexity is not None,
-        ])
+        return sum(
+            [
+                self._twitter is not None,
+                self._reddit is not None,
+                self._trends is not None,
+                self._perplexity is not None,
+            ]
+        )
 
     async def get_signal(
         self,
@@ -416,10 +423,7 @@ class SignalAggregator:
 
         # Weighted combination
         confidence = (
-            source_conf * 0.25 +
-            strength_conf * 0.25 +
-            agreement_conf * 0.30 +
-            volume_conf * 0.20
+            source_conf * 0.25 + strength_conf * 0.25 + agreement_conf * 0.30 + volume_conf * 0.20
         )
 
         return min(1.0, max(0.0, confidence))

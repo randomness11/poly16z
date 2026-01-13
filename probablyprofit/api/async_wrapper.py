@@ -7,9 +7,9 @@ Provides utilities to safely wrap synchronous libraries in async contexts.
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
-from typing import Callable, TypeVar, Any
-from loguru import logger
+from typing import Any, Callable, TypeVar
 
+from loguru import logger
 
 T = TypeVar("T")
 
@@ -41,6 +41,7 @@ async def run_sync(func: Callable[..., T], *args, **kwargs) -> T:
     # Create a partial function with kwargs if needed
     if kwargs:
         from functools import partial
+
         func = partial(func, **kwargs)
         result = await loop.run_in_executor(_executor, func, *args)
     else:
@@ -61,6 +62,7 @@ def async_wrap(func: Callable[..., T]) -> Callable[..., T]:
         # Now can be called with await
         result = await sync_function()
     """
+
     @wraps(func)
     async def wrapper(*args, **kwargs) -> T:
         return await run_sync(func, *args, **kwargs)
@@ -98,12 +100,12 @@ class AsyncClientWrapper:
         attr = getattr(self._sync_client, name)
 
         if callable(attr):
+
             @wraps(attr)
             async def async_method(*args, **kwargs):
                 try:
                     return await asyncio.wait_for(
-                        run_sync(attr, *args, **kwargs),
-                        timeout=self._timeout
+                        run_sync(attr, *args, **kwargs), timeout=self._timeout
                     )
                 except asyncio.TimeoutError:
                     logger.error(f"[AsyncWrapper] {name}() timed out after {self._timeout}s")
@@ -143,8 +145,10 @@ class SyncToAsyncMixin:
             if hasattr(self, sync_name):
                 sync_method = getattr(self, sync_name)
                 if callable(sync_method):
+
                     async def async_method(*args, **kwargs):
                         return await run_sync(sync_method, *args, **kwargs)
+
                     return async_method
 
         raise AttributeError(f"'{type(self).__name__}' has no attribute '{name}'")

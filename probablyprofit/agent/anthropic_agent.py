@@ -5,17 +5,21 @@ AI-powered trading agent using Claude for decision-making.
 """
 
 import json
-from typing import Optional, AsyncIterator, Callable
+from typing import AsyncIterator, Callable, Optional
+
 from anthropic import Anthropic
 from loguru import logger
 
-from probablyprofit.agent.base import BaseAgent, Observation, Decision
-from probablyprofit.utils.ai_rate_limiter import AIRateLimiter, anthropic_rate_limited
-from probablyprofit.utils.resilience import retry
-from probablyprofit.agent.formatters import ObservationFormatter, get_decision_schema
+from probablyprofit.agent.base import BaseAgent, Decision, Observation
+from probablyprofit.agent.formatters import (ObservationFormatter,
+                                             get_decision_schema)
 from probablyprofit.api.client import PolymarketClient
-from probablyprofit.api.exceptions import AgentException, ValidationException, NetworkException
+from probablyprofit.api.exceptions import (AgentException, NetworkException,
+                                           ValidationException)
 from probablyprofit.risk.manager import RiskManager
+from probablyprofit.utils.ai_rate_limiter import (AIRateLimiter,
+                                                  anthropic_rate_limited)
+from probablyprofit.utils.resilience import retry
 from probablyprofit.utils.validators import validate_confidence
 
 
@@ -97,7 +101,10 @@ class AnthropicAgent(BaseAgent):
         formatted = ObservationFormatter.format_full_observation(
             observation, self.memory, include_history=5, max_markets=20
         )
-        return formatted + "\nBased on the above information and your trading strategy, what should you do next?\n"
+        return (
+            formatted
+            + "\nBased on the above information and your trading strategy, what should you do next?\n"
+        )
 
     def _parse_decision(self, response: str, observation: Observation) -> Decision:
         """
@@ -218,7 +225,7 @@ class AnthropicAgent(BaseAgent):
 
             # Record successful request and token usage
             self._rate_limiter.record_success()
-            if hasattr(response, 'usage') and response.usage:
+            if hasattr(response, "usage") and response.usage:
                 self._rate_limiter.record_tokens(
                     response.usage.input_tokens + response.usage.output_tokens
                 )
@@ -231,7 +238,7 @@ class AnthropicAgent(BaseAgent):
         except Exception as e:
             # Check if it's a retryable Anthropic error
             error_str = str(e).lower()
-            if any(x in error_str for x in ['timeout', 'connection', 'rate limit', '529', '503']):
+            if any(x in error_str for x in ["timeout", "connection", "rate limit", "529", "503"]):
                 logger.warning(f"Claude API transient error (will retry): {e}")
                 raise NetworkException(f"Claude API transient error: {e}")
             # Non-retryable error
@@ -276,7 +283,7 @@ Respond with a JSON object containing your trading decision:
 }}
 
 If you recommend holding or not trading, just respond with action: "hold" and explain why.
-"""
+""",
                 }
             ]
 
@@ -357,7 +364,7 @@ Then provide your trading decision as a JSON object:
 ```
 
 If you recommend holding or not trading, explain why and use action: "hold".
-"""
+""",
                 }
             ]
 
@@ -395,4 +402,5 @@ If you recommend holding or not trading, explain why and use action: "hold".
         except Exception as e:
             logger.error(f"Error getting decision from Claude: {e}")
             from probablyprofit.api.exceptions import AgentException
+
             raise AgentException(f"Claude decision error: {e}")

@@ -2,24 +2,16 @@
 Tests for the Order Management System.
 """
 
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
-from probablyprofit.api.order_manager import (
-    OrderStatus,
-    OrderSide,
-    OrderType,
-    Fill,
-    ManagedOrder,
-    OrderBook,
-    OrderManager,
-)
-from probablyprofit.api.exceptions import (
-    OrderNotFoundError,
-    OrderCancelError,
-    OrderModifyError,
-)
+import pytest
+
+from probablyprofit.api.exceptions import (OrderCancelError, OrderModifyError,
+                                           OrderNotFoundError)
+from probablyprofit.api.order_manager import (Fill, ManagedOrder, OrderBook,
+                                              OrderManager, OrderSide,
+                                              OrderStatus, OrderType)
 
 
 class TestManagedOrder:
@@ -316,9 +308,11 @@ class TestOrderManager:
         client = MagicMock()
         # Use side_effect to return unique order IDs
         order_counter = [0]
+
         def make_order_response():
             order_counter[0] += 1
             return MagicMock(order_id=f"ex_order_{order_counter[0]}")
+
         client.place_order = AsyncMock(side_effect=lambda *args, **kwargs: make_order_response())
         client.cancel_order = AsyncMock(return_value=True)
         return client

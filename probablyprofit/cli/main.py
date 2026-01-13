@@ -21,10 +21,11 @@ from typing import Optional
 # Ensure package is importable
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+import logging
+
 # Configure logging BEFORE any other imports to suppress debug logs
 # This MUST happen before importing anything that uses loguru
 from loguru import logger
-import logging
 
 # Disable all debug logging globally
 logger.remove()  # Remove default stderr handler
@@ -40,17 +41,16 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 import click
-from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
-from rich.prompt import Prompt, Confirm
-from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.markdown import Markdown
 from rich import print as rprint
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.prompt import Confirm, Prompt
+from rich.table import Table
 
-from probablyprofit.config import (
-    load_config, save_config, Config, validate_api_key, get_quick_status
-)
+from probablyprofit.config import (Config, get_quick_status, load_config,
+                                   save_config, validate_api_key)
 
 console = Console()
 
@@ -167,7 +167,7 @@ def setup(reconfigure: bool = False):
     while True:
         choice = Prompt.ask(
             "Which AI would you like to configure? (1/2/3, or 'skip' if already set)",
-            default="1" if not config.is_configured else "skip"
+            default="1" if not config.is_configured else "skip",
         )
 
         if choice.lower() == "skip":
@@ -190,7 +190,9 @@ def setup(reconfigure: bool = False):
                         setattr(config, f"{provider}_api_key", key)
                         console.print(f"[green]✓ {name} configured successfully![/green]\n")
                     else:
-                        console.print(f"[red]✗ Invalid API key. Please check and try again.[/red]\n")
+                        console.print(
+                            f"[red]✗ Invalid API key. Please check and try again.[/red]\n"
+                        )
 
                 # Ask if they want to add another
                 if not Confirm.ask("Add another AI provider?", default=False):
@@ -244,19 +246,14 @@ def setup(reconfigure: bool = False):
     console.print("\n[bold cyan]Step 3: Preferences[/bold cyan]\n")
 
     # Default mode
-    config.dry_run = Confirm.ask(
-        "Start in safe mode (dry-run, no real trades)?",
-        default=True
-    )
+    config.dry_run = Confirm.ask("Start in safe mode (dry-run, no real trades)?", default=True)
 
     # Set preferred agent
     agents = config.get_available_agents()
     if len(agents) > 1:
         console.print(f"\nYou have multiple AI providers: {', '.join(agents)}")
         preferred = Prompt.ask(
-            "Which should be the default?",
-            choices=agents + ["auto"],
-            default="auto"
+            "Which should be the default?", choices=agents + ["auto"], default="auto"
         )
         config.preferred_agent = preferred
     elif agents:
@@ -273,25 +270,34 @@ def setup(reconfigure: bool = False):
 
 @cli.command()
 @click.argument("strategy", required=False)
-@click.option("--strategy-file", "-s", type=click.Path(exists=True),
-              help="Path to strategy file")
-@click.option("--dry-run", "-d", is_flag=True, default=None,
-              help="Simulate trades without real money")
+@click.option("--strategy-file", "-s", type=click.Path(exists=True), help="Path to strategy file")
+@click.option(
+    "--dry-run", "-d", is_flag=True, default=None, help="Simulate trades without real money"
+)
 @click.option("--live", is_flag=True, help="Enable live trading (overrides dry-run)")
-@click.option("--agent", "-a", type=click.Choice(["openai", "anthropic", "google", "auto"]),
-              default="auto", help="AI agent to use")
-@click.option("--interval", "-i", type=int, default=60,
-              help="Loop interval in seconds")
+@click.option(
+    "--agent",
+    "-a",
+    type=click.Choice(["openai", "anthropic", "google", "auto"]),
+    default="auto",
+    help="AI agent to use",
+)
+@click.option("--interval", "-i", type=int, default=60, help="Loop interval in seconds")
 @click.option("--paper", "-p", is_flag=True, help="Paper trading with virtual money")
-@click.option("--paper-capital", type=float, default=10000,
-              help="Starting capital for paper trading")
+@click.option(
+    "--paper-capital", type=float, default=10000, help="Starting capital for paper trading"
+)
 @click.option("--news", is_flag=True, help="Enable news context (requires Perplexity API)")
 @click.option("--once", is_flag=True, help="Run once and exit (don't loop)")
 @click.option("--stream", is_flag=True, default=True, help="Stream AI thinking in real-time")
 @click.option("--no-stream", is_flag=True, help="Disable streaming output")
 @click.option("--kelly", is_flag=True, help="Enable Kelly criterion position sizing")
-@click.option("--sizing", type=click.Choice(["manual", "kelly", "confidence", "dynamic"]),
-              default="manual", help="Position sizing method")
+@click.option(
+    "--sizing",
+    type=click.Choice(["manual", "kelly", "confidence", "dynamic"]),
+    default="manual",
+    help="Position sizing method",
+)
 def run(
     strategy: Optional[str],
     strategy_file: Optional[str],
@@ -339,7 +345,9 @@ def run(
     if strategy:
         # Inline strategy
         strategy_prompt = strategy
-        console.print(f"[bold]Strategy:[/bold] {strategy[:60]}{'...' if len(strategy) > 60 else ''}\n")
+        console.print(
+            f"[bold]Strategy:[/bold] {strategy[:60]}{'...' if len(strategy) > 60 else ''}\n"
+        )
 
     elif strategy_file:
         # File-based strategy
@@ -412,17 +420,20 @@ def run(
 
     # Run the bot
     async def _run():
+        from probablyprofit.agent.strategy import CustomStrategy
         from probablyprofit.api.client import PolymarketClient
         from probablyprofit.risk.manager import RiskManager
-        from probablyprofit.agent.strategy import CustomStrategy
 
         # Import the right agent
         if selected_agent == "openai":
-            from probablyprofit.agent.openai_agent import OpenAIAgent as AgentClass
+            from probablyprofit.agent.openai_agent import \
+                OpenAIAgent as AgentClass
         elif selected_agent == "anthropic":
-            from probablyprofit.agent.anthropic_agent import AnthropicAgent as AgentClass
+            from probablyprofit.agent.anthropic_agent import \
+                AnthropicAgent as AgentClass
         else:
-            from probablyprofit.agent.gemini_agent import GeminiAgent as AgentClass
+            from probablyprofit.agent.gemini_agent import \
+                GeminiAgent as AgentClass
 
         # Initialize client
         client = PolymarketClient(private_key=config.private_key)
@@ -479,7 +490,9 @@ def run(
 
         # Enable news if requested
         if news:
-            from probablyprofit.agent.intelligence import wrap_with_intelligence
+            from probablyprofit.agent.intelligence import \
+                wrap_with_intelligence
+
             agent_instance = wrap_with_intelligence(agent_instance, enable_news=True)
             console.print("[dim]News intelligence enabled[/dim]\n")
 
@@ -566,6 +579,7 @@ def markets(limit: int, search: Optional[str]):
 
         probablyprofit markets -q "bitcoin"
     """
+
     async def _markets():
         from probablyprofit.api.client import PolymarketClient
 
@@ -579,7 +593,8 @@ def markets(limit: int, search: Optional[str]):
             if search:
                 search_lower = search.lower()
                 markets_list = [
-                    m for m in markets_list
+                    m
+                    for m in markets_list
                     if search_lower in m.question.lower()
                     or (m.description and search_lower in m.description.lower())
                 ]
@@ -616,7 +631,7 @@ def markets(limit: int, search: Optional[str]):
                     q,
                     f"[{yes_color}]{yes_price:.0%}[/{yes_color}]",
                     f"[{no_color}]{no_price:.0%}[/{no_color}]",
-                    f"${m.volume:,.0f}"
+                    f"${m.volume:,.0f}",
                 )
 
             console.print(table)
@@ -679,6 +694,7 @@ def balance():
     """
     Check your wallet balance.
     """
+
     async def _balance():
         config = load_config()
 
@@ -707,6 +723,7 @@ def positions():
     """
     Show your open positions.
     """
+
     async def _positions():
         config = load_config()
 
@@ -742,7 +759,7 @@ def positions():
                     p.outcome,
                     f"{p.size:.2f}",
                     f"${p.avg_price:.2f}",
-                    f"[{pnl_color}]${p.pnl:+.2f}[/{pnl_color}]"
+                    f"[{pnl_color}]${p.pnl:+.2f}[/{pnl_color}]",
                 )
 
             console.print(table)
@@ -765,6 +782,7 @@ def dashboard(port: int):
 
     try:
         import uvicorn
+
         from probablyprofit.web.app import create_app
 
         app = create_app()
@@ -785,11 +803,12 @@ def backtest(strategy_file: str, days: int):
 
         probablyprofit backtest -s my_strategy.txt --days 60
     """
+
     async def _backtest():
-        from probablyprofit.backtesting.engine import BacktestEngine
-        from probablyprofit.backtesting.data import MockDataGenerator
-        from probablyprofit.risk.manager import RiskManager
         from probablyprofit.agent.mock_agent import MockAgent
+        from probablyprofit.backtesting.data import MockDataGenerator
+        from probablyprofit.backtesting.engine import BacktestEngine
+        from probablyprofit.risk.manager import RiskManager
 
         config = load_config()
 
@@ -801,9 +820,7 @@ def backtest(strategy_file: str, days: int):
 
         with console.status("[bold]Generating market data...[/bold]"):
             generator = MockDataGenerator()
-            markets_data, timestamps = generator.generate_market_scenario(
-                num_markets=5, days=days
-            )
+            markets_data, timestamps = generator.generate_market_scenario(num_markets=5, days=days)
 
         with console.status("[bold]Running simulation...[/bold]"):
             risk = RiskManager(initial_capital=config.initial_capital)
@@ -865,7 +882,7 @@ def create_strategy(output: str):
         "[bold]3. What should it AVOID?[/bold]\n"
         "   [dim](e.g., 'Markets with low liquidity', 'Prices near 50/50')[/dim]\n"
         "   Avoid",
-        default="low liquidity markets"
+        default="low liquidity markets",
     )
 
     # Position size
@@ -874,7 +891,7 @@ def create_strategy(output: str):
         "[bold]4. How much per trade?[/bold]\n"
         "   [dim](e.g., '$10', '5% of capital')[/dim]\n"
         "   Size",
-        default="$10"
+        default="$10",
     )
 
     # Risk tolerance
@@ -882,7 +899,7 @@ def create_strategy(output: str):
     risk_level = Prompt.ask(
         "[bold]5. Risk tolerance?[/bold]",
         choices=["conservative", "moderate", "aggressive"],
-        default="moderate"
+        default="moderate",
     )
 
     # Build the strategy

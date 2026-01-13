@@ -7,7 +7,8 @@ Automatically monitors open positions and executes stop-loss/take-profit orders.
 import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Optional, Callable, Any
+from typing import Any, Callable, Dict, List, Optional
+
 from loguru import logger
 
 from probablyprofit.api.client import PolymarketClient, Position
@@ -17,6 +18,7 @@ from probablyprofit.risk.manager import RiskManager
 @dataclass
 class PositionAlert:
     """An alert for a position event."""
+
     position_id: str
     market_id: str
     outcome: str
@@ -30,6 +32,7 @@ class PositionAlert:
 @dataclass
 class MonitoredPosition:
     """A position being monitored with its thresholds."""
+
     market_id: str
     outcome: str
     entry_price: float
@@ -104,7 +107,9 @@ class PositionMonitor:
         self._take_profits_triggered = 0
         self._alerts: List[PositionAlert] = []
 
-        logger.info(f"PositionMonitor initialized (interval: {check_interval}s, dry_run: {dry_run})")
+        logger.info(
+            f"PositionMonitor initialized (interval: {check_interval}s, dry_run: {dry_run})"
+        )
 
     def add_position(
         self,
@@ -209,10 +214,7 @@ class PositionMonitor:
         # Fetch current positions from API
         try:
             api_positions = await self.client.get_positions()
-            position_prices = {
-                f"{p.market_id}:{p.outcome}": p.current_price
-                for p in api_positions
-            }
+            position_prices = {f"{p.market_id}:{p.outcome}": p.current_price for p in api_positions}
         except Exception as e:
             logger.warning(f"[PositionMonitor] Failed to fetch positions: {e}")
             return alerts
@@ -278,7 +280,7 @@ class PositionMonitor:
                 "stop_loss_price": position.stop_loss_price,
                 "pnl": pnl,
                 "pnl_pct": pnl_pct,
-            }
+            },
         )
 
         logger.warning(f"[PositionMonitor] 🛑 STOP-LOSS: {position_id} @ {current_price:.4f}")
@@ -299,7 +301,9 @@ class PositionMonitor:
             except Exception as e:
                 logger.error(f"[PositionMonitor] Failed to execute stop-loss: {e}")
         else:
-            logger.info(f"[PositionMonitor] DRY RUN: Would sell {position.size} @ {current_price:.4f}")
+            logger.info(
+                f"[PositionMonitor] DRY RUN: Would sell {position.size} @ {current_price:.4f}"
+            )
             self.remove_position(position_id)
 
         self._alerts.append(alert)
@@ -333,7 +337,7 @@ class PositionMonitor:
                 "take_profit_price": position.take_profit_price,
                 "pnl": pnl,
                 "pnl_pct": pnl_pct,
-            }
+            },
         )
 
         logger.info(f"[PositionMonitor] 🎯 TAKE-PROFIT: {position_id} @ {current_price:.4f}")
@@ -354,7 +358,9 @@ class PositionMonitor:
             except Exception as e:
                 logger.error(f"[PositionMonitor] Failed to execute take-profit: {e}")
         else:
-            logger.info(f"[PositionMonitor] DRY RUN: Would sell {position.size} @ {current_price:.4f}")
+            logger.info(
+                f"[PositionMonitor] DRY RUN: Would sell {position.size} @ {current_price:.4f}"
+            )
             self.remove_position(position_id)
 
         self._alerts.append(alert)

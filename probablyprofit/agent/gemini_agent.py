@@ -8,24 +8,29 @@ Updated to use the new google-genai SDK.
 import asyncio
 import json
 from typing import Any, Optional
+
 from loguru import logger
 
-from probablyprofit.agent.base import BaseAgent, Observation, Decision
-from probablyprofit.agent.formatters import ObservationFormatter, get_decision_schema
+from probablyprofit.agent.base import BaseAgent, Decision, Observation
+from probablyprofit.agent.formatters import (ObservationFormatter,
+                                             get_decision_schema)
 from probablyprofit.api.client import PolymarketClient
-from probablyprofit.api.exceptions import AgentException, NetworkException, ValidationException
+from probablyprofit.api.exceptions import (AgentException, NetworkException,
+                                           ValidationException)
 from probablyprofit.risk.manager import RiskManager
-from probablyprofit.utils.validators import validate_confidence
 from probablyprofit.utils.resilience import retry
+from probablyprofit.utils.validators import validate_confidence
 
 # Try new SDK first, fall back to old
 try:
     from google import genai
     from google.genai import types
+
     NEW_SDK = True
 except ImportError:
     try:
         import google.generativeai as genai
+
         NEW_SDK = False
         logger.warning("Using deprecated google.generativeai - consider upgrading to google-genai")
     except ImportError:
@@ -50,7 +55,9 @@ class GeminiAgent(BaseAgent):
         strategy: Optional[Any] = None,
         dry_run: bool = False,
     ):
-        super().__init__(client, risk_manager, name, loop_interval, strategy=strategy, dry_run=dry_run)
+        super().__init__(
+            client, risk_manager, name, loop_interval, strategy=strategy, dry_run=dry_run
+        )
 
         if genai is None:
             raise ImportError("Google Gemini SDK not installed. Run: pip install google-genai")
@@ -66,8 +73,7 @@ class GeminiAgent(BaseAgent):
             # Old google-generativeai SDK
             genai.configure(api_key=google_api_key)
             self.model = genai.GenerativeModel(
-                model_name=model,
-                generation_config={"response_mime_type": "application/json"}
+                model_name=model, generation_config={"response_mime_type": "application/json"}
             )
 
         logger.info(f"GeminiAgent '{name}' initialized with model {model}")
@@ -104,10 +110,7 @@ class GeminiAgent(BaseAgent):
                 )
                 return response.text
             else:
-                response = await asyncio.to_thread(
-                    self.model.generate_content,
-                    prompt
-                )
+                response = await asyncio.to_thread(self.model.generate_content, prompt)
                 if not response or not response.text:
                     raise AgentException("Empty response from Gemini")
                 return response.text
@@ -117,7 +120,10 @@ class GeminiAgent(BaseAgent):
             raise NetworkException(f"Gemini API connection error: {e}")
         except Exception as e:
             error_str = str(e).lower()
-            if any(x in error_str for x in ['timeout', 'connection', 'rate limit', '429', '503', '502', 'quota']):
+            if any(
+                x in error_str
+                for x in ["timeout", "connection", "rate limit", "429", "503", "502", "quota"]
+            ):
                 logger.warning(f"Gemini API transient error (will retry): {e}")
                 raise NetworkException(f"Gemini API transient error: {e}")
             raise AgentException(f"Gemini API error: {e}")
@@ -182,7 +188,7 @@ Respond with a JSON object with this schema:
                 size=float(data.get("size", 0)),
                 price=price,
                 reasoning=data.get("reasoning", ""),
-                confidence=confidence
+                confidence=confidence,
             )
 
         except json.JSONDecodeError as e:

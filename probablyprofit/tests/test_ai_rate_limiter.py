@@ -1,18 +1,17 @@
 """
 Tests for AI Provider Rate Limiting.
 """
-import pytest
+
 import asyncio
 import time
 
-from probablyprofit.utils.ai_rate_limiter import (
-    AIRateLimiter,
-    AI_PROVIDER_LIMITS,
-    openai_rate_limited,
-    anthropic_rate_limited,
-    ai_resilient,
-    get_all_ai_limiter_stats,
-)
+import pytest
+
+from probablyprofit.utils.ai_rate_limiter import (AI_PROVIDER_LIMITS,
+                                                  AIRateLimiter, ai_resilient,
+                                                  anthropic_rate_limited,
+                                                  get_all_ai_limiter_stats,
+                                                  openai_rate_limited)
 
 
 class TestAIProviderLimits:

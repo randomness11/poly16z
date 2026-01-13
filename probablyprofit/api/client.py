@@ -8,9 +8,9 @@ Includes retry logic and circuit breakers for resilience.
 import asyncio
 import json
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional
 from datetime import datetime
 from decimal import Decimal
+from typing import Any, Dict, List, Optional
 
 import httpx
 from loguru import logger
@@ -18,7 +18,8 @@ from pydantic import BaseModel, Field
 
 try:
     from py_clob_client.client import ClobClient
-    from py_clob_client.clob_types import OrderArgs, OrderType, ApiCreds
+    from py_clob_client.clob_types import ApiCreds, OrderArgs, OrderType
+
     params_avail = True
 except ImportError:
     ClobClient = None
@@ -27,27 +28,16 @@ except ImportError:
     params_avail = False
     logger.warning("py-clob-client not installed. Trading functionality will be limited.")
 
-from probablyprofit.api.exceptions import (
-    APIException,
-    NetworkException,
-    RateLimitException,
-    ValidationException,
-    OrderException,
-)
-from probablyprofit.utils.validators import (
-    validate_price,
-    validate_positive,
-    validate_non_negative,
-    validate_side,
-)
-from probablyprofit.utils.resilience import (
-    retry,
-    CircuitBreaker,
-    RateLimiter,
-)
-from probablyprofit.utils.cache import AsyncTTLCache, market_cache, price_cache
-from probablyprofit.api.async_wrapper import run_sync, AsyncClientWrapper
+from probablyprofit.api.async_wrapper import AsyncClientWrapper, run_sync
+from probablyprofit.api.exceptions import (APIException, NetworkException,
+                                           OrderException, RateLimitException,
+                                           ValidationException)
 from probablyprofit.config import get_config
+from probablyprofit.utils.cache import AsyncTTLCache, market_cache, price_cache
+from probablyprofit.utils.resilience import CircuitBreaker, RateLimiter, retry
+from probablyprofit.utils.validators import (validate_non_negative,
+                                             validate_positive, validate_price,
+                                             validate_side)
 
 
 def _get_circuit_breakers():
@@ -57,12 +47,12 @@ def _get_circuit_breakers():
         "gamma": CircuitBreaker(
             "polymarket-gamma",
             failure_threshold=cfg.api.circuit_breaker_threshold,
-            timeout=cfg.api.circuit_breaker_timeout
+            timeout=cfg.api.circuit_breaker_timeout,
         ),
         "clob": CircuitBreaker(
             "polymarket-clob",
             failure_threshold=cfg.api.circuit_breaker_threshold,
-            timeout=cfg.api.circuit_breaker_timeout
+            timeout=cfg.api.circuit_breaker_timeout,
         ),
     }
 
@@ -73,7 +63,7 @@ def _get_rate_limiter():
     return RateLimiter(
         "polymarket-api",
         calls=cfg.api.polymarket_rate_limit_calls,
-        period=cfg.api.polymarket_rate_limit_period
+        period=cfg.api.polymarket_rate_limit_period,
     )
 
 
@@ -244,18 +234,24 @@ class PolymarketClient:
         self._market_cache: AsyncTTLCache[Market] = AsyncTTLCache(
             ttl=cfg.api.market_cache_ttl,
             max_size=cfg.api.market_cache_max_size,
-            name="polymarket-markets"
+            name="polymarket-markets",
         )
         # LRU cache for positions to prevent unbounded growth
         self._positions_cache: LRUCache = LRUCache(max_size=cfg.api.positions_cache_max_size)
 
         # Wrap sync client for async use if available
-        self._async_clob = AsyncClientWrapper(self.client, timeout=cfg.api.http_timeout) if self.client else None
+        self._async_clob = (
+            AsyncClientWrapper(self.client, timeout=cfg.api.http_timeout) if self.client else None
+        )
 
     def _init_clob_client_sync(self, private_key: str) -> None:
         """Initialize CLOB client synchronously (may block event loop)."""
         try:
-            host = "https://clob.polymarket.com" if not self.testnet else "https://clob-test.polymarket.com"
+            host = (
+                "https://clob.polymarket.com"
+                if not self.testnet
+                else "https://clob-test.polymarket.com"
+            )
             self.client = ClobClient(host=host, key=private_key, chain_id=self.chain_id)
 
             # Auto-derive L2 API credentials (blocking operation)
@@ -301,9 +297,9 @@ class PolymarketClient:
         if self._api_creds:
             headers["Authorization"] = f"Bearer {self._api_creds.api_key}"
             # Some endpoints might need additional headers
-            if hasattr(self._api_creds, 'api_secret'):
+            if hasattr(self._api_creds, "api_secret"):
                 headers["X-Api-Secret"] = self._api_creds.api_secret
-            if hasattr(self._api_creds, 'api_passphrase'):
+            if hasattr(self._api_creds, "api_passphrase"):
                 headers["X-Api-Passphrase"] = self._api_creds.api_passphrase
         return headers
 
@@ -352,7 +348,7 @@ class PolymarketClient:
                     "closed": "false",  # ONLY open markets (most important filter)
                     "limit": limit * 2,  # Fetch extra to filter out low-volume
                     "offset": offset,
-                }
+                },
             )
             response.raise_for_status()
             data = response.json()
@@ -368,23 +364,27 @@ class PolymarketClient:
                     # STRICT FILTER: Skip closed markets
                     if market_data.get("closed", False) == True:
                         continue
-                    
+
                     # STRICT FILTER: Must have real volume (> $100)
                     volume = float(market_data.get("volumeNum", market_data.get("volume", 0)))
                     if volume < 100:
                         continue
-                    
+
                     condition_id = market_data.get("conditionId", "")
                     question = market_data.get("question", "Unknown")
                     description = market_data.get("description")
-                    
+
                     # Parse end date safely
                     end_date_str = market_data.get("endDate", "")
                     try:
-                        end_date = datetime.fromisoformat(end_date_str.replace("Z", "+00:00")) if end_date_str else datetime.now()
+                        end_date = (
+                            datetime.fromisoformat(end_date_str.replace("Z", "+00:00"))
+                            if end_date_str
+                            else datetime.now()
+                        )
                     except ValueError:
                         end_date = datetime.now()
-                    
+
                     # Parse outcomes - Gamma returns JSON string like '["Yes", "No"]'
                     outcomes_raw = market_data.get("outcomes", '["Yes", "No"]')
                     if isinstance(outcomes_raw, str):
@@ -393,7 +393,7 @@ class PolymarketClient:
                         outcomes = outcomes_raw
 
                     # Parse outcome prices - Gamma returns JSON string like '["0.21", "0.79"]'
-                    prices_raw = market_data.get("outcomePrices", '[0.5, 0.5]')
+                    prices_raw = market_data.get("outcomePrices", "[0.5, 0.5]")
                     if isinstance(prices_raw, str):
                         prices_parsed = json.loads(prices_raw)
                         outcome_prices = [float(p) for p in prices_parsed]
@@ -401,12 +401,16 @@ class PolymarketClient:
                         outcome_prices = [float(p) for p in prices_raw]
                     else:
                         outcome_prices = [0.5] * len(outcomes)
-                    
+
                     # Use volumeNum for numeric volume (Gamma provides this)
                     volume = float(market_data.get("volumeNum", market_data.get("volume", 0)))
-                    liquidity = float(market_data.get("liquidityNum", market_data.get("liquidity", 0)))
-                    is_active = market_data.get("active", True) and not market_data.get("closed", False)
-                    
+                    liquidity = float(
+                        market_data.get("liquidityNum", market_data.get("liquidity", 0))
+                    )
+                    is_active = market_data.get("active", True) and not market_data.get(
+                        "closed", False
+                    )
+
                     market = Market(
                         condition_id=condition_id,
                         question=question,
@@ -465,7 +469,9 @@ class PolymarketClient:
                 description=market_data.get("description"),
                 end_date=datetime.fromisoformat(market_data["end_date"]),
                 outcomes=market_data["outcomes"],
-                outcome_prices=market_data.get("outcome_prices", [0.5] * len(market_data["outcomes"])),
+                outcome_prices=market_data.get(
+                    "outcome_prices", [0.5] * len(market_data["outcomes"])
+                ),
                 volume=float(market_data.get("volume", 0)),
                 liquidity=float(market_data.get("liquidity", 0)),
                 active=market_data.get("active", True),
@@ -491,9 +497,7 @@ class PolymarketClient:
             Orderbook data with bids and asks
         """
         try:
-            response = await self.http_client.get(
-                f"/orderbook/{condition_id}/{outcome}"
-            )
+            response = await self.http_client.get(f"/orderbook/{condition_id}/{outcome}")
             response.raise_for_status()
             return response.json()
         except Exception as e:
@@ -552,8 +556,8 @@ class PolymarketClient:
             logger.info(f"Placing {side} order: {size} shares @ ${price} on {outcome}")
 
             # Resolve outcome name to token_id
-            token_id = outcome 
-            
+            token_id = outcome
+
             # Try to resolve token ID from market metadata if outcome is a name (e.g. "Yes")
             if len(outcome) < 10:  # Heuristic: names are short, token IDs are long hashes
                 market = await self.get_market(market_id)
@@ -561,13 +565,13 @@ class PolymarketClient:
                     try:
                         # Find index of outcome name
                         idx = market.outcomes.index(outcome)
-                        
+
                         # Get token IDs from metadata
                         clob_ids = market.metadata.get("clobTokenIds")
                         if clob_ids:
                             if isinstance(clob_ids, str):
-                                                clob_ids = json.loads(clob_ids)
-                            
+                                clob_ids = json.loads(clob_ids)
+
                             if isinstance(clob_ids, list) and idx < len(clob_ids):
                                 token_id = clob_ids[idx]
                                 logger.debug(f"Resolved outcome '{outcome}' to token ID {token_id}")
@@ -602,7 +606,7 @@ class PolymarketClient:
                 size=size,
                 price=price,
                 status="submitted",
-                timestamp=datetime.now()
+                timestamp=datetime.now(),
             )
 
             logger.info(f"Order placed successfully: {order.order_id}")
@@ -813,11 +817,9 @@ class PolymarketClient:
             try:
                 response = await asyncio.wait_for(
                     self.http_client.get(
-                        "/positions",
-                        headers=self._get_auth_headers(),
-                        timeout=10.0
+                        "/positions", headers=self._get_auth_headers(), timeout=10.0
                     ),
-                    timeout=15.0  # Overall timeout
+                    timeout=15.0,  # Overall timeout
                 )
             except asyncio.TimeoutError:
                 logger.warning("Positions fetch timed out - using cached data")
@@ -841,7 +843,9 @@ class PolymarketClient:
                     outcome = pos_data.get("outcome", "Yes")
                     size = float(pos_data.get("size", pos_data.get("quantity", 0)))
                     avg_price = float(pos_data.get("avg_price", pos_data.get("average_price", 0.5)))
-                    current_price = float(pos_data.get("current_price", pos_data.get("price", avg_price)))
+                    current_price = float(
+                        pos_data.get("current_price", pos_data.get("price", avg_price))
+                    )
 
                     if size > 0:  # Only include non-zero positions
                         position = Position(
@@ -850,7 +854,7 @@ class PolymarketClient:
                             size=size,
                             avg_price=avg_price,
                             current_price=current_price,
-                            pnl=size * (current_price - avg_price)
+                            pnl=size * (current_price - avg_price),
                         )
                         positions.append(position)
                         self._positions_cache.set(f"{market_id}_{outcome}", position)
@@ -890,11 +894,11 @@ class PolymarketClient:
             if hasattr(self.client, "get_balance"):
                 try:
                     import asyncio
+
                     # Run synchronous call with timeout
                     loop = asyncio.get_event_loop()
                     balance = await asyncio.wait_for(
-                        loop.run_in_executor(None, self.client.get_balance),
-                        timeout=5.0
+                        loop.run_in_executor(None, self.client.get_balance), timeout=5.0
                     )
                     if balance is not None:
                         return float(balance)
@@ -906,13 +910,12 @@ class PolymarketClient:
             # Method 2: Try CLOB API /balances endpoint
             try:
                 import asyncio
+
                 response = await asyncio.wait_for(
                     self.http_client.get(
-                        "/balances",
-                        headers=self._get_auth_headers(),
-                        timeout=5.0
+                        "/balances", headers=self._get_auth_headers(), timeout=5.0
                     ),
-                    timeout=10.0
+                    timeout=10.0,
                 )
                 if response.status_code == 200:
                     data = response.json()
@@ -940,12 +943,13 @@ class PolymarketClient:
             # Method 3: Try data-api endpoint for balance
             try:
                 import asyncio
+
                 # Polymarket data API endpoint
                 response = await asyncio.wait_for(
                     self.gamma_client.get(
                         f"/users/{self._api_creds.api_key if self._api_creds else 'unknown'}/balances"
                     ),
-                    timeout=10.0
+                    timeout=10.0,
                 )
                 if response.status_code == 200:
                     data = response.json()

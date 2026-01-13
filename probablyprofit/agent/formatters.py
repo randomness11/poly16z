@@ -5,7 +5,8 @@ This eliminates duplication across Anthropic, OpenAI, and Gemini agents.
 """
 
 from typing import List
-from probablyprofit.agent.base import Observation, AgentMemory
+
+from probablyprofit.agent.base import AgentMemory, Observation
 from probablyprofit.api.client import Market, Position
 
 
@@ -107,14 +108,14 @@ Top Markets ({min(len(observation.markets), max_markets)}):
 Recent Trading History:
 {memory.get_recent_history(include_history)}"""
         ]
-        
+
         # Add intelligence context if available
         if observation.news_context:
             sections.append(f"\n{observation.news_context}")
-        
+
         if observation.sentiment_summary:
             sections.append(f"\n{observation.sentiment_summary}")
-        
+
         return "\n".join(sections)
 
     @staticmethod

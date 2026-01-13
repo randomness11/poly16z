@@ -1,18 +1,18 @@
 """
 Tests for Position Monitor.
 """
-import pytest
+
 import asyncio
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
-from probablyprofit.trading.position_monitor import (
-    PositionMonitor,
-    PositionAlert,
-    MonitoredPosition,
-)
+import pytest
+
 from probablyprofit.api.client import Position
 from probablyprofit.risk.manager import RiskManager
+from probablyprofit.trading.position_monitor import (MonitoredPosition,
+                                                     PositionAlert,
+                                                     PositionMonitor)
 
 
 @pytest.fixture
@@ -113,11 +113,14 @@ class TestPositionMonitor:
             size=100.0,
         )
 
-        assert monitor.update_thresholds(
-            "0x123:Yes",
-            stop_loss_price=0.30,
-            take_profit_price=0.90,
-        ) is True
+        assert (
+            monitor.update_thresholds(
+                "0x123:Yes",
+                stop_loss_price=0.30,
+                take_profit_price=0.90,
+            )
+            is True
+        )
 
         pos = monitor.positions["0x123:Yes"]
         assert pos.stop_loss_price == 0.30

@@ -6,9 +6,9 @@ Trades markets with strong price momentum.
 
 import asyncio
 import os
-from dotenv import load_dotenv
 
-from poly16z import PolymarketClient, AnthropicAgent, RiskManager
+from dotenv import load_dotenv
+from poly16z import AnthropicAgent, PolymarketClient, RiskManager
 from poly16z.utils import setup_logging
 
 # Load environment variables

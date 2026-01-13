@@ -7,19 +7,19 @@ Core agent framework implementing the observe-decide-act loop.
 import asyncio
 from abc import ABC, abstractmethod
 from collections import deque
-from typing import Any, Deque, Dict, List, Optional
 from datetime import datetime
+# Note: Type checking import to avoid circular dependency if needed, but BaseStrategy doesn't import BaseAgent
+from typing import TYPE_CHECKING, Any, Deque, Dict, List, Optional
+
 from loguru import logger
 from pydantic import BaseModel, ConfigDict
 
-from probablyprofit.api.client import PolymarketClient, Market, Position, Order
-from probablyprofit.risk.manager import RiskManager
+from probablyprofit.api.client import Market, Order, PolymarketClient, Position
 from probablyprofit.config import get_config
-# Note: Type checking import to avoid circular dependency if needed, but BaseStrategy doesn't import BaseAgent
-from typing import TYPE_CHECKING
+from probablyprofit.risk.manager import RiskManager
+
 if TYPE_CHECKING:
     from probablyprofit.agent.strategy import BaseStrategy
-
 
 
 class Observation(BaseModel):
@@ -31,12 +31,11 @@ class Observation(BaseModel):
     balance: float
     signals: Dict[str, Any] = {}
     metadata: Dict[str, Any] = {}
-    
+
     # Intelligence Layer (Phase 2)
     news_context: Optional[str] = None  # Formatted news summary
     sentiment_summary: Optional[str] = None  # Formatted sentiment analysis
     market_sentiments: Dict[str, Any] = {}  # market_id -> sentiment data
-
 
 
 class Decision(BaseModel):
@@ -87,7 +86,9 @@ class AgentMemory(BaseModel):
         if not isinstance(self.trades, deque) or self.trades.maxlen != max_trades:
             self.trades = deque(self.trades, maxlen=max_trades)
 
-    def configure_persistence(self, db_manager: Any, agent_name: str = "unknown", agent_type: str = "unknown") -> None:
+    def configure_persistence(
+        self, db_manager: Any, agent_name: str = "unknown", agent_type: str = "unknown"
+    ) -> None:
         """Enable database persistence."""
         self.enable_persistence = True
         self._db_manager = db_manager
@@ -104,7 +105,9 @@ class AgentMemory(BaseModel):
         if self.enable_persistence and self._db_manager:
             try:
                 import json
-                from probablyprofit.storage.repositories import ObservationRepository
+
+                from probablyprofit.storage.repositories import \
+                    ObservationRepository
 
                 async with self._db_manager.get_session() as session:
                     await ObservationRepository.create(
@@ -113,8 +116,12 @@ class AgentMemory(BaseModel):
                         balance=observation.balance,
                         num_markets=len(observation.markets),
                         num_positions=len(observation.positions),
-                        markets_json=json.dumps([m.model_dump(mode='json') for m in observation.markets]),
-                        positions_json=json.dumps([p.model_dump(mode='json') for p in observation.positions]),
+                        markets_json=json.dumps(
+                            [m.model_dump(mode="json") for m in observation.markets]
+                        ),
+                        positions_json=json.dumps(
+                            [p.model_dump(mode="json") for p in observation.positions]
+                        ),
                         signals_json=json.dumps(observation.signals),
                         metadata_json=json.dumps(observation.metadata),
                         news_context=observation.news_context,
@@ -132,7 +139,9 @@ class AgentMemory(BaseModel):
         if self.enable_persistence and self._db_manager:
             try:
                 import json
-                from probablyprofit.storage.repositories import DecisionRepository
+
+                from probablyprofit.storage.repositories import \
+                    DecisionRepository
 
                 async with self._db_manager.get_session() as session:
                     await DecisionRepository.create(
@@ -203,7 +212,7 @@ class BaseAgent(ABC):
         risk_manager: RiskManager,
         name: str = "BaseAgent",
         loop_interval: int = 60,
-        strategy: Optional['BaseStrategy'] = None,
+        strategy: Optional["BaseStrategy"] = None,
         dry_run: bool = False,
         enable_persistence: bool = True,
     ):
@@ -249,7 +258,9 @@ class BaseAgent(ABC):
 
                 db_manager = get_db_manager()
                 agent_type = self.__class__.__name__.replace("Agent", "").lower()
-                self.memory.configure_persistence(db_manager, agent_name=name, agent_type=agent_type)
+                self.memory.configure_persistence(
+                    db_manager, agent_name=name, agent_type=agent_type
+                )
             except Exception as e:
                 logger.warning(f"Could not enable database persistence: {e}")
 
@@ -274,7 +285,7 @@ class BaseAgent(ABC):
         """Get human-readable market name from ID."""
         name = self._market_names.get(market_id, market_id[:20] + "...")
         if len(name) > max_len:
-            name = name[:max_len-3] + "..."
+            name = name[: max_len - 3] + "..."
         return name
 
     def _has_position(self, market_id: str, outcome: str) -> bool:
@@ -307,7 +318,9 @@ class BaseAgent(ABC):
         if self.strategy:
             original_count = len(markets)
             markets = self.strategy.filter_markets(markets)
-            logger.debug(f"[{self.name}] Strategy '{self.strategy.name}' filtered markets: {original_count} -> {len(markets)}")
+            logger.debug(
+                f"[{self.name}] Strategy '{self.strategy.name}' filtered markets: {original_count} -> {len(markets)}"
+            )
 
         positions = await self.client.get_positions()
 
@@ -388,7 +401,9 @@ class BaseAgent(ABC):
 
             # Check if we already have a position (avoid duplicate buys)
             if self._has_position(decision.market_id, decision.outcome):
-                logger.info(f"[{self.name}] ⏭️ Already have position in '{market_name}' ({decision.outcome}) - skipping")
+                logger.info(
+                    f"[{self.name}] ⏭️ Already have position in '{market_name}' ({decision.outcome}) - skipping"
+                )
                 return True  # Not an error, just skip
 
             # Apply Auto-Sizing if enabled
@@ -398,7 +413,7 @@ class BaseAgent(ABC):
                     price=decision.price,
                     confidence=decision.confidence,
                     method=self.sizing_method,
-                    kelly_fraction=self.kelly_fraction
+                    kelly_fraction=self.kelly_fraction,
                 )
                 if decision.size != original_size:
                     logger.info(
@@ -413,7 +428,9 @@ class BaseAgent(ABC):
 
             # Dry run check
             if self.dry_run:
-                logger.info(f"[{self.name}] 🧪 DRY RUN: Would BUY ${decision.size:.2f} of '{decision.outcome}' @ {decision.price:.2f}")
+                logger.info(
+                    f"[{self.name}] 🧪 DRY RUN: Would BUY ${decision.size:.2f} of '{decision.outcome}' @ {decision.price:.2f}"
+                )
                 logger.info(f"[{self.name}] 📊 Market: {market_name}")
                 # Track position even in dry run
                 self._record_position(decision.market_id, decision.outcome)
@@ -432,7 +449,9 @@ class BaseAgent(ABC):
                 await self.memory.add_trade(order)
                 self.risk_manager.record_trade(order.size, order.price)
                 self._record_position(decision.market_id, decision.outcome)
-                logger.info(f"[{self.name}] ✅ BUY order placed: ${decision.size:.2f} on '{market_name}'")
+                logger.info(
+                    f"[{self.name}] ✅ BUY order placed: ${decision.size:.2f} on '{market_name}'"
+                )
                 return True
 
             return False
@@ -447,7 +466,9 @@ class BaseAgent(ABC):
 
             # Dry run check
             if self.dry_run:
-                logger.info(f"[{self.name}] 🧪 DRY RUN: Would SELL ${decision.size:.2f} of '{decision.outcome}' @ {decision.price:.2f}")
+                logger.info(
+                    f"[{self.name}] 🧪 DRY RUN: Would SELL ${decision.size:.2f} of '{decision.outcome}' @ {decision.price:.2f}"
+                )
                 logger.info(f"[{self.name}] 📊 Market: {market_name}")
                 # Remove from tracked positions
                 key = f"{decision.market_id}:{decision.outcome}"
@@ -469,7 +490,9 @@ class BaseAgent(ABC):
                 # Remove from tracked positions
                 key = f"{decision.market_id}:{decision.outcome}"
                 self._open_positions.discard(key)
-                logger.info(f"[{self.name}] ✅ SELL order placed: ${decision.size:.2f} on '{market_name}'")
+                logger.info(
+                    f"[{self.name}] ✅ SELL order placed: ${decision.size:.2f} on '{market_name}'"
+                )
                 return True
 
             return False
@@ -503,6 +526,7 @@ class BaseAgent(ABC):
         recovery_manager = None
         try:
             from probablyprofit.utils.recovery import get_recovery_manager
+
             recovery_manager = get_recovery_manager()
         except ImportError:
             pass
@@ -522,7 +546,9 @@ class BaseAgent(ABC):
                     success = await self.act(decision)
 
                     if success:
-                        logger.info(f"[{self.name}] Loop iteration {self._loop_count} completed successfully")
+                        logger.info(
+                            f"[{self.name}] Loop iteration {self._loop_count} completed successfully"
+                        )
                         self._consecutive_errors = 0  # Reset on success
                     else:
                         logger.warning(f"[{self.name}] Loop iteration {self._loop_count} failed")
@@ -533,7 +559,9 @@ class BaseAgent(ABC):
                         await recovery_manager.checkpoint(self)
 
                     # Save risk state periodically
-                    if self._loop_count % cfg.agent.risk_save_interval == 0 and hasattr(self.risk_manager, 'save_state'):
+                    if self._loop_count % cfg.agent.risk_save_interval == 0 and hasattr(
+                        self.risk_manager, "save_state"
+                    ):
                         await self.risk_manager.save_state(agent_name=self.name)
 
                 except Exception as e:
@@ -560,7 +588,7 @@ class BaseAgent(ABC):
                     # Exponential backoff on errors
                     backoff = min(
                         self._base_backoff * (2 ** (self._consecutive_errors - 1)),
-                        self._max_backoff
+                        self._max_backoff,
                     )
                     logger.warning(f"[{self.name}] Backing off for {backoff:.1f}s before retry...")
                     await asyncio.sleep(backoff)
@@ -568,10 +596,7 @@ class BaseAgent(ABC):
 
                 # Wait before next iteration, but check for stop signal
                 try:
-                    await asyncio.wait_for(
-                        self._stop_event.wait(),
-                        timeout=self.loop_interval
-                    )
+                    await asyncio.wait_for(self._stop_event.wait(), timeout=self.loop_interval)
                     # If we get here, stop was requested
                     logger.info(f"[{self.name}] Stop signal received")
                     break
@@ -596,7 +621,7 @@ class BaseAgent(ABC):
 
         try:
             # Save risk manager state for crash recovery
-            if hasattr(self.risk_manager, 'save_state'):
+            if hasattr(self.risk_manager, "save_state"):
                 await self.risk_manager.save_state(agent_name=self.name)
                 logger.debug(f"[{self.name}] Risk state saved")
         except Exception as e:
@@ -604,7 +629,7 @@ class BaseAgent(ABC):
 
         try:
             # Close the API client connection
-            if hasattr(self.client, 'close'):
+            if hasattr(self.client, "close"):
                 await self.client.close()
                 logger.debug(f"[{self.name}] API client closed")
         except Exception as e:

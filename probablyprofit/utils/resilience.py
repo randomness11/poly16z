@@ -12,14 +12,11 @@ from dataclasses import dataclass, field
 from enum import Enum
 from functools import wraps
 from typing import Any, Callable, Optional, Set, Type, TypeVar, Union
+
 from loguru import logger
 
-from probablyprofit.api.exceptions import (
-    APIException,
-    NetworkException,
-    RateLimitException,
-)
-
+from probablyprofit.api.exceptions import (APIException, NetworkException,
+                                           RateLimitException)
 
 # Type variable for generic return types
 T = TypeVar("T")
@@ -28,6 +25,7 @@ T = TypeVar("T")
 # =============================================================================
 # RETRY WITH EXPONENTIAL BACKOFF
 # =============================================================================
+
 
 @dataclass
 class RetryConfig:
@@ -67,7 +65,7 @@ def calculate_delay(attempt: int, config: RetryConfig) -> float:
     Returns:
         Delay in seconds
     """
-    delay = config.base_delay * (config.exponential_base ** attempt)
+    delay = config.base_delay * (config.exponential_base**attempt)
     delay = min(delay, config.max_delay)
 
     if config.jitter:
@@ -164,6 +162,7 @@ def retry(
             raise RuntimeError(f"Retry exhausted for {func.__name__}")
 
         return wrapper
+
     return decorator
 
 
@@ -171,10 +170,12 @@ def retry(
 # CIRCUIT BREAKER
 # =============================================================================
 
+
 class CircuitState(Enum):
     """Circuit breaker states."""
-    CLOSED = "closed"      # Normal operation
-    OPEN = "open"          # Failing, rejecting calls
+
+    CLOSED = "closed"  # Normal operation
+    OPEN = "open"  # Failing, rejecting calls
     HALF_OPEN = "half_open"  # Testing if service recovered
 
 
@@ -244,8 +245,10 @@ class CircuitBreaker:
     def state(self) -> CircuitState:
         """Get current state, potentially transitioning from OPEN to HALF_OPEN."""
         if self._state == CircuitState.OPEN:
-            if self._last_failure_time and \
-               (time.time() - self._last_failure_time) >= self.config.timeout:
+            if (
+                self._last_failure_time
+                and (time.time() - self._last_failure_time) >= self.config.timeout
+            ):
                 self._state = CircuitState.HALF_OPEN
                 self._success_count = 0
                 logger.info(f"[CircuitBreaker] '{self.name}' transitioning to HALF_OPEN")
@@ -287,8 +290,7 @@ class CircuitBreaker:
                 if self._failure_count >= self.config.failure_threshold:
                     self._state = CircuitState.OPEN
                     logger.warning(
-                        f"[CircuitBreaker] '{self.name}' OPEN "
-                        f"({self._failure_count} failures)"
+                        f"[CircuitBreaker] '{self.name}' OPEN " f"({self._failure_count} failures)"
                     )
 
     def reset(self) -> None:
@@ -306,9 +308,7 @@ class CircuitBreaker:
         async def wrapper(*args: Any, **kwargs: Any) -> T:
             # Check if circuit is open
             if self.state == CircuitState.OPEN:
-                raise APIException(
-                    f"Circuit breaker '{self.name}' is OPEN - service unavailable"
-                )
+                raise APIException(f"Circuit breaker '{self.name}' is OPEN - service unavailable")
 
             try:
                 result = await func(*args, **kwargs)
@@ -339,6 +339,7 @@ class CircuitBreaker:
 # =============================================================================
 # RATE LIMITER
 # =============================================================================
+
 
 @dataclass
 class RateLimiterConfig:
@@ -431,6 +432,7 @@ class RateLimiter:
 # COMBINED RESILIENCE DECORATOR
 # =============================================================================
 
+
 def resilient(
     retry_attempts: int = 3,
     retry_delay: float = 1.0,
@@ -453,6 +455,7 @@ def resilient(
         async def fetch_markets():
             ...
     """
+
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         # Build the decoration chain
         decorated = func
@@ -489,6 +492,7 @@ def resilient(
 # TIMEOUT WRAPPER
 # =============================================================================
 
+
 def with_timeout(seconds: float) -> Callable:
     """
     Decorator to add timeout to async functions.
@@ -501,25 +505,25 @@ def with_timeout(seconds: float) -> Callable:
         async def slow_operation():
             ...
     """
+
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> T:
             try:
-                return await asyncio.wait_for(
-                    func(*args, **kwargs),
-                    timeout=seconds
-                )
+                return await asyncio.wait_for(func(*args, **kwargs), timeout=seconds)
             except asyncio.TimeoutError:
                 logger.error(f"[Timeout] {func.__name__} timed out after {seconds}s")
                 raise
 
         return wrapper
+
     return decorator
 
 
 # =============================================================================
 # HEALTH CHECK UTILITIES
 # =============================================================================
+
 
 def get_resilience_status() -> dict:
     """Get status of all resilience components."""

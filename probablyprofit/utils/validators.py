@@ -3,6 +3,7 @@ Input validation utilities.
 """
 
 from typing import Optional
+
 from probablyprofit.api.exceptions import ValidationException
 
 
@@ -130,9 +131,7 @@ def validate_private_key(key: str) -> str:
     key_clean = key[2:] if key.startswith("0x") else key
 
     if len(key_clean) != 64:
-        raise ValidationException(
-            f"Private key must be 64 hex characters (got {len(key_clean)})"
-        )
+        raise ValidationException(f"Private key must be 64 hex characters (got {len(key_clean)})")
 
     try:
         int(key_clean, 16)

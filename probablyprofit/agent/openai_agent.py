@@ -7,16 +7,19 @@ AI-powered trading agent using GPT-4 for decision-making.
 import asyncio
 import json
 from typing import Any, Optional
-from openai import OpenAI
-from loguru import logger
 
-from probablyprofit.agent.base import BaseAgent, Observation, Decision
-from probablyprofit.agent.formatters import ObservationFormatter, get_decision_schema
+from loguru import logger
+from openai import OpenAI
+
+from probablyprofit.agent.base import BaseAgent, Decision, Observation
+from probablyprofit.agent.formatters import (ObservationFormatter,
+                                             get_decision_schema)
 from probablyprofit.api.client import PolymarketClient
-from probablyprofit.api.exceptions import AgentException, NetworkException, ValidationException
+from probablyprofit.api.exceptions import (AgentException, NetworkException,
+                                           ValidationException)
 from probablyprofit.risk.manager import RiskManager
-from probablyprofit.utils.validators import validate_confidence
 from probablyprofit.utils.resilience import retry
+from probablyprofit.utils.validators import validate_confidence
 
 
 class OpenAIAgent(BaseAgent):
@@ -39,7 +42,9 @@ class OpenAIAgent(BaseAgent):
         """
         Initialize OpenAI agent.
         """
-        super().__init__(client, risk_manager, name, loop_interval, strategy=strategy, dry_run=dry_run)
+        super().__init__(
+            client, risk_manager, name, loop_interval, strategy=strategy, dry_run=dry_run
+        )
 
         self.openai = OpenAI(api_key=openai_api_key)
         self.model = model
@@ -69,10 +74,7 @@ class OpenAIAgent(BaseAgent):
             AgentException: On non-retryable errors
         """
         try:
-            response = await asyncio.to_thread(
-                self.openai.chat.completions.create,
-                **api_kwargs
-            )
+            response = await asyncio.to_thread(self.openai.chat.completions.create, **api_kwargs)
 
             if not response.choices or len(response.choices) == 0:
                 raise AgentException("No response choices from OpenAI")
@@ -84,7 +86,9 @@ class OpenAIAgent(BaseAgent):
             raise NetworkException(f"OpenAI API connection error: {e}")
         except Exception as e:
             error_str = str(e).lower()
-            if any(x in error_str for x in ['timeout', 'connection', 'rate limit', '429', '503', '502']):
+            if any(
+                x in error_str for x in ["timeout", "connection", "rate limit", "429", "503", "502"]
+            ):
                 logger.warning(f"OpenAI API transient error (will retry): {e}")
                 raise NetworkException(f"OpenAI API transient error: {e}")
             raise AgentException(f"OpenAI API error: {e}")
@@ -120,16 +124,16 @@ class OpenAIAgent(BaseAgent):
 
         try:
             obs_text = self._format_observation(observation)
-            
+
             # OpenAI 'o1' and 'o3' models have specific constraints:
             # 1. No 'system' role (use 'developer' or merge into 'user')
             # 2. No 'temperature' parameter (fixed at 1.0 usually)
             # 3. No 'response_format' json_object in early preview (sometimes)
-            
+
             is_reasoning_model = self.model.startswith("o1") or self.model.startswith("o3")
-            
+
             messages = []
-            
+
             if is_reasoning_model:
                 # For o1, we put everything in the user prompt or use developer role if available.
                 # Currently safe bet is to prepend system instruction to user content.
@@ -144,7 +148,7 @@ Output schema:
 {get_decision_schema()}
 """
                 messages.append({"role": "user", "content": combined_prompt})
-                
+
                 # Reasoning models don't support temperature
                 kwargs = {}
                 # Some o1 preview models support max_completion_tokens instead of max_tokens
@@ -158,17 +162,13 @@ Output schema:
 """
                 messages = [
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": obs_text}
+                    {"role": "user", "content": obs_text},
                 ]
                 kwargs = {"temperature": self.temperature}
 
             # Call API
             # Note: o1/o3 reasoning models don't support response_format parameter
-            api_kwargs = {
-                "model": self.model,
-                "messages": messages,
-                **kwargs
-            }
+            api_kwargs = {"model": self.model, "messages": messages, **kwargs}
 
             # Only add response_format for non-reasoning models
             if not is_reasoning_model:
@@ -210,7 +210,7 @@ Output schema:
                 size=float(data.get("size", 0)),
                 price=price,
                 reasoning=data.get("reasoning", ""),
-                confidence=confidence
+                confidence=confidence,
             )
 
         except json.JSONDecodeError as e:

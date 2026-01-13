@@ -4,27 +4,22 @@ REST API Routes
 All REST API endpoints for the dashboard.
 """
 
-from fastapi import APIRouter, HTTPException, Query
-from typing import List, Optional
 from datetime import datetime
+from typing import List, Optional
+
+from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 
-from probablyprofit.web.api.models import (
-    HealthResponse,
-    StatusResponse,
-    TradeResponse,
-    PerformanceResponse,
-    EquityCurvePoint,
-    MarketResponse,
-    ExposureResponse,
-    PositionExposure,
-    CorrelationGroup,
-    ArbitrageResponse,
-    ArbitrageOpportunityResponse,
-    PaperPortfolioResponse,
-    PaperPositionResponse,
-    PaperTradeResponse,
-)
+from probablyprofit.web.api.models import (ArbitrageOpportunityResponse,
+                                           ArbitrageResponse, CorrelationGroup,
+                                           EquityCurvePoint, ExposureResponse,
+                                           HealthResponse, MarketResponse,
+                                           PaperPortfolioResponse,
+                                           PaperPositionResponse,
+                                           PaperTradeResponse,
+                                           PerformanceResponse,
+                                           PositionExposure, StatusResponse,
+                                           TradeResponse)
 
 router = APIRouter(prefix="/api")
 
@@ -71,6 +66,7 @@ async def health_check():
     # Check 2: Database connectivity
     try:
         from probablyprofit.storage.database import get_db_manager
+
         db = get_db_manager()
         checks["database"] = {"status": "healthy"}
     except Exception as e:
@@ -80,10 +76,13 @@ async def health_check():
     # Check 3: Memory usage
     try:
         import psutil
+
         memory = psutil.virtual_memory()
         memory_pct = memory.percent
         checks["memory"] = {
-            "status": "healthy" if memory_pct < 80 else ("degraded" if memory_pct < 95 else "unhealthy"),
+            "status": (
+                "healthy" if memory_pct < 80 else ("degraded" if memory_pct < 95 else "unhealthy")
+            ),
             "percent_used": memory_pct,
         }
         if memory_pct >= 95:
@@ -270,8 +269,9 @@ async def get_markets(active: bool = Query(True), limit: int = Query(50, le=200)
 @router.post("/control/start")
 async def start_agent():
     """Start the agent loop."""
-    from probablyprofit.web.app import get_agent_state
     import asyncio
+
+    from probablyprofit.web.app import get_agent_state
 
     state = get_agent_state()
     if not state:
@@ -357,22 +357,26 @@ async def get_exposure():
 
             # Track exposure by category
             if correlation_group:
-                exposure_by_category[correlation_group] = exposure_by_category.get(correlation_group, 0) + value
+                exposure_by_category[correlation_group] = (
+                    exposure_by_category.get(correlation_group, 0) + value
+                )
 
-            positions.append(PositionExposure(
-                market_id=market_id,
-                market_question=market_question,
-                outcome="Yes",
-                size=size,
-                entry_price=entry_price,
-                current_price=current_price,
-                value=value,
-                pnl=pnl,
-                pnl_pct=pnl_pct,
-                correlation_group=correlation_group,
-                has_trailing_stop=False,
-                stop_price=None,
-            ))
+            positions.append(
+                PositionExposure(
+                    market_id=market_id,
+                    market_question=market_question,
+                    outcome="Yes",
+                    size=size,
+                    entry_price=entry_price,
+                    current_price=current_price,
+                    value=value,
+                    pnl=pnl,
+                    pnl_pct=pnl_pct,
+                    correlation_group=correlation_group,
+                    has_trailing_stop=False,
+                    stop_price=None,
+                )
+            )
 
         except Exception as e:
             logger.warning(f"Error processing position {market_id}: {e}")
@@ -388,22 +392,28 @@ async def get_exposure():
         elif total_exp > risk_manager.limits.max_position_size:
             risk_level = "medium"
 
-        correlation_groups.append(CorrelationGroup(
-            group_name=group_name,
-            total_exposure=total_exp,
-            positions_count=len(group_positions),
-            markets=[p.market_id[:20] for p in group_positions],
-            risk_level=risk_level,
-        ))
+        correlation_groups.append(
+            CorrelationGroup(
+                group_name=group_name,
+                total_exposure=total_exp,
+                positions_count=len(group_positions),
+                markets=[p.market_id[:20] for p in group_positions],
+                risk_level=risk_level,
+            )
+        )
 
     # Calculate risk metrics
     total_exposure = sum(p.value for p in positions)
     risk_metrics = {
-        "concentration_ratio": max(exposure_by_category.values()) / total_exposure if total_exposure > 0 else 0,
+        "concentration_ratio": (
+            max(exposure_by_category.values()) / total_exposure if total_exposure > 0 else 0
+        ),
         "position_count": len(positions),
         "avg_position_size": total_exposure / len(positions) if positions else 0,
         "max_position_size": max(p.value for p in positions) if positions else 0,
-        "exposure_pct": (total_exposure / stats["current_capital"]) * 100 if stats["current_capital"] > 0 else 0,
+        "exposure_pct": (
+            (total_exposure / stats["current_capital"]) * 100 if stats["current_capital"] > 0 else 0
+        ),
         "daily_pnl": stats["daily_pnl"],
         "daily_loss_limit_used": abs(stats["daily_pnl"]) / risk_manager.limits.max_daily_loss * 100,
     }
@@ -414,7 +424,9 @@ async def get_exposure():
     if risk_metrics["daily_loss_limit_used"] > 50:
         warnings.append(f"Daily loss limit {risk_metrics['daily_loss_limit_used']:.0f}% used")
     if len(positions) >= risk_manager.limits.max_positions - 1:
-        warnings.append(f"Near max positions limit ({len(positions)}/{risk_manager.limits.max_positions})")
+        warnings.append(
+            f"Near max positions limit ({len(positions)}/{risk_manager.limits.max_positions})"
+        )
 
     return ExposureResponse(
         total_value=stats["current_capital"],
@@ -433,7 +445,17 @@ def _detect_correlation_group(question: str) -> Optional[str]:
     question_lower = question.lower()
 
     correlation_keywords = {
-        "politics_us": ["trump", "biden", "republican", "democrat", "election", "gop", "dnc", "congress", "senate"],
+        "politics_us": [
+            "trump",
+            "biden",
+            "republican",
+            "democrat",
+            "election",
+            "gop",
+            "dnc",
+            "congress",
+            "senate",
+        ],
         "crypto": ["bitcoin", "btc", "ethereum", "eth", "crypto", "solana", "memecoin"],
         "tech": ["apple", "google", "microsoft", "meta", "amazon", "nvidia", "ai", "openai"],
         "sports": ["nba", "nfl", "mlb", "super bowl", "championship", "playoffs", "world cup"],
@@ -461,14 +483,16 @@ async def get_positions():
     positions = []
 
     for market_id, size in risk_manager.open_positions.items():
-        positions.append({
-            "market_id": market_id,
-            "size": size,
-            "outcome": "Yes",
-            "avg_price": 0.5,
-            "current_price": 0.5,
-            "pnl": 0.0,
-        })
+        positions.append(
+            {
+                "market_id": market_id,
+                "size": size,
+                "outcome": "Yes",
+                "avg_price": 0.5,
+                "current_price": 0.5,
+                "pnl": 0.0,
+            }
+        )
 
     return positions
 
@@ -481,10 +505,10 @@ def _get_arbitrage_detector():
     """Get or create the arbitrage detector singleton."""
     global _arbitrage_detector
     if _arbitrage_detector is None:
-        from probablyprofit.arbitrage.detector import ArbitrageDetector, ArbitrageConfig
-        _arbitrage_detector = ArbitrageDetector(
-            config=ArbitrageConfig(min_profit_pct=0.02)
-        )
+        from probablyprofit.arbitrage.detector import (ArbitrageConfig,
+                                                       ArbitrageDetector)
+
+        _arbitrage_detector = ArbitrageDetector(config=ArbitrageConfig(min_profit_pct=0.02))
     return _arbitrage_detector
 
 
@@ -541,8 +565,9 @@ async def scan_arbitrage():
 
         # Try to get Kalshi client if configured
         try:
-            from probablyprofit.api.kalshi_client import KalshiClient
             import os
+
+            from probablyprofit.api.kalshi_client import KalshiClient
 
             kalshi_key = os.getenv("KALSHI_API_KEY_ID")
             if kalshi_key:

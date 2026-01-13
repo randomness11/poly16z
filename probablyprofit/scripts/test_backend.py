@@ -5,8 +5,8 @@ Quick test script to verify the FastAPI backend works.
 """
 
 import asyncio
-import sys
 import os
+import sys
 
 # Add parent directory to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
@@ -18,18 +18,24 @@ async def test_imports():
 
     try:
         from probablyprofit.web.app import create_app
+
         print("  ✅ web.app imported")
 
         from probablyprofit.web.server import run_server_with_agent
+
         print("  ✅ web.server imported")
 
         from probablyprofit.web.api.routes import router
+
         print("  ✅ web.api.routes imported")
 
-        from probablyprofit.web.api.websocket import manager, websocket_endpoint
+        from probablyprofit.web.api.websocket import (manager,
+                                                      websocket_endpoint)
+
         print("  ✅ web.api.websocket imported")
 
         from probablyprofit.web.api.models import StatusResponse, TradeResponse
+
         print("  ✅ web.api.models imported")
 
         return True
@@ -67,6 +73,7 @@ async def test_app_creation():
     except Exception as e:
         print(f"  ❌ App creation failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -76,8 +83,11 @@ async def test_database_integration():
     print("\n🧪 Testing database integration...")
 
     try:
-        from probablyprofit.storage.database import get_db_manager, initialize_database
-        from probablyprofit.storage.models import TradeRecord, ObservationRecord, DecisionRecord
+        from probablyprofit.storage.database import (get_db_manager,
+                                                     initialize_database)
+        from probablyprofit.storage.models import (DecisionRecord,
+                                                   ObservationRecord,
+                                                   TradeRecord)
 
         print("  ✅ Database models imported")
 
@@ -99,10 +109,12 @@ async def test_mock_agent_state():
     print("\n🧪 Testing agent state management...")
 
     try:
-        from probablyprofit.web.app import set_agent_state, get_agent_state
-        from probablyprofit.agent.base import BaseAgent, AgentMemory, Observation, Decision
-        from probablyprofit.risk.manager import RiskManager
         from datetime import datetime
+
+        from probablyprofit.agent.base import (AgentMemory, BaseAgent,
+                                               Decision, Observation)
+        from probablyprofit.risk.manager import RiskManager
+        from probablyprofit.web.app import get_agent_state, set_agent_state
 
         # Create mock components (skip PolymarketClient)
         risk = RiskManager(initial_capital=1000.0)
@@ -132,6 +144,7 @@ async def test_mock_agent_state():
     except Exception as e:
         print(f"  ❌ Agent state test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -142,13 +155,12 @@ async def test_api_endpoints():
 
     try:
         from datetime import datetime
-        from probablyprofit.web.api.models import (
-            StatusResponse,
-            TradeResponse,
-            PerformanceResponse,
-            EquityCurvePoint,
-            MarketResponse,
-        )
+
+        from probablyprofit.web.api.models import (EquityCurvePoint,
+                                                   MarketResponse,
+                                                   PerformanceResponse,
+                                                   StatusResponse,
+                                                   TradeResponse)
 
         # Test model creation
         status = StatusResponse(
@@ -194,6 +206,7 @@ async def test_api_endpoints():
     except Exception as e:
         print(f"  ❌ API endpoint test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 

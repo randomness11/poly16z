@@ -3,20 +3,16 @@ Tests for resilience utilities.
 """
 
 import asyncio
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from probablyprofit.utils.resilience import (
-    retry,
-    CircuitBreaker,
-    RateLimiter,
-    CircuitState,
-    calculate_delay,
-    RetryConfig,
-    get_resilience_status,
-    reset_all_circuit_breakers,
-)
+import pytest
+
 from probablyprofit.api.exceptions import NetworkException, RateLimitException
+from probablyprofit.utils.resilience import (CircuitBreaker, CircuitState,
+                                             RateLimiter, RetryConfig,
+                                             calculate_delay,
+                                             get_resilience_status,
+                                             reset_all_circuit_breakers, retry)
 
 
 class TestRetry:
@@ -134,6 +130,7 @@ class TestCircuitBreaker:
 
         # Next call should be rejected immediately
         from probablyprofit.api.exceptions import APIException
+
         with pytest.raises(APIException) as exc_info:
             await failing_func()
 

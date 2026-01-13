@@ -7,12 +7,13 @@ Supports both official API and scraping fallback.
 
 import asyncio
 import re
-from typing import Any, Dict, List, Optional
-from datetime import datetime, timedelta
 from dataclasses import dataclass, field
-from pydantic import BaseModel
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
 import httpx
 from loguru import logger
+from pydantic import BaseModel
 
 
 class Tweet(BaseModel):
@@ -38,8 +39,13 @@ class Tweet(BaseModel):
         """Score based on author reach and engagement."""
         # Log scale for followers to not over-weight mega accounts
         import math
-        follower_score = math.log10(max(self.author_followers, 1) + 1) / 7  # Normalize to ~1 for 10M followers
-        engagement_score = math.log10(max(self.engagement, 1) + 1) / 5  # Normalize to ~1 for 100k engagement
+
+        follower_score = (
+            math.log10(max(self.author_followers, 1) + 1) / 7
+        )  # Normalize to ~1 for 10M followers
+        engagement_score = (
+            math.log10(max(self.engagement, 1) + 1) / 5
+        )  # Normalize to ~1 for 100k engagement
         return (follower_score + engagement_score) / 2
 
 
@@ -97,15 +103,50 @@ class TwitterSentiment(BaseModel):
 
 # Sentiment keywords for basic analysis
 BULLISH_KEYWORDS = [
-    "bullish", "moon", "pump", "buy", "long", "up", "rally", "breakout",
-    "winning", "success", "confirmed", "happening", "yes", "will win",
-    "looking good", "strong", "surge", "soar", "rocket", "lfg", "wagmi"
+    "bullish",
+    "moon",
+    "pump",
+    "buy",
+    "long",
+    "up",
+    "rally",
+    "breakout",
+    "winning",
+    "success",
+    "confirmed",
+    "happening",
+    "yes",
+    "will win",
+    "looking good",
+    "strong",
+    "surge",
+    "soar",
+    "rocket",
+    "lfg",
+    "wagmi",
 ]
 
 BEARISH_KEYWORDS = [
-    "bearish", "dump", "sell", "short", "down", "crash", "breakdown",
-    "losing", "fail", "denied", "not happening", "no", "will lose",
-    "looking bad", "weak", "plunge", "tank", "rekt", "ngmi", "rug"
+    "bearish",
+    "dump",
+    "sell",
+    "short",
+    "down",
+    "crash",
+    "breakdown",
+    "losing",
+    "fail",
+    "denied",
+    "not happening",
+    "no",
+    "will lose",
+    "looking bad",
+    "weak",
+    "plunge",
+    "tank",
+    "rekt",
+    "ngmi",
+    "rug",
 ]
 
 
@@ -128,7 +169,7 @@ def analyze_tweet_sentiment(text: str) -> float:
 
 def extract_hashtags(text: str) -> List[str]:
     """Extract hashtags from tweet text."""
-    return re.findall(r'#(\w+)', text)
+    return re.findall(r"#(\w+)", text)
 
 
 class TwitterClient:
@@ -246,17 +287,21 @@ class TwitterClient:
                 author_id = tweet_data.get("author_id", "")
                 author = users.get(author_id, {})
 
-                tweets.append(Tweet(
-                    id=tweet_data["id"],
-                    text=tweet_data["text"],
-                    author=author.get("username", "unknown"),
-                    author_followers=author.get("public_metrics", {}).get("followers_count", 0),
-                    created_at=datetime.fromisoformat(tweet_data["created_at"].replace("Z", "+00:00")),
-                    likes=tweet_data.get("public_metrics", {}).get("like_count", 0),
-                    retweets=tweet_data.get("public_metrics", {}).get("retweet_count", 0),
-                    replies=tweet_data.get("public_metrics", {}).get("reply_count", 0),
-                    url=f"https://twitter.com/{author.get('username', 'i')}/status/{tweet_data['id']}",
-                ))
+                tweets.append(
+                    Tweet(
+                        id=tweet_data["id"],
+                        text=tweet_data["text"],
+                        author=author.get("username", "unknown"),
+                        author_followers=author.get("public_metrics", {}).get("followers_count", 0),
+                        created_at=datetime.fromisoformat(
+                            tweet_data["created_at"].replace("Z", "+00:00")
+                        ),
+                        likes=tweet_data.get("public_metrics", {}).get("like_count", 0),
+                        retweets=tweet_data.get("public_metrics", {}).get("retweet_count", 0),
+                        replies=tweet_data.get("public_metrics", {}).get("reply_count", 0),
+                        url=f"https://twitter.com/{author.get('username', 'i')}/status/{tweet_data['id']}",
+                    )
+                )
 
             logger.debug(f"Twitter API returned {len(tweets)} tweets for '{query}'")
             return tweets
@@ -323,20 +368,22 @@ class TwitterClient:
                 break
 
             # Clean up text
-            text = re.sub(r'<[^>]+>', '', content).strip()
-            text = re.sub(r'\s+', ' ', text)
+            text = re.sub(r"<[^>]+>", "", content).strip()
+            text = re.sub(r"\s+", " ", text)
 
             if len(text) > 10:  # Filter empty/tiny tweets
-                tweets.append(Tweet(
-                    id=f"nitter_{i}_{hash(text) % 10000}",
-                    text=text,
-                    author=author,
-                    author_followers=0,  # Not available via scraping
-                    created_at=datetime.now(),  # Approximate
-                    likes=0,
-                    retweets=0,
-                    replies=0,
-                ))
+                tweets.append(
+                    Tweet(
+                        id=f"nitter_{i}_{hash(text) % 10000}",
+                        text=text,
+                        author=author,
+                        author_followers=0,  # Not available via scraping
+                        created_at=datetime.now(),  # Approximate
+                        likes=0,
+                        retweets=0,
+                        replies=0,
+                    )
+                )
 
         return tweets
 
@@ -390,8 +437,7 @@ class TwitterClient:
                 author_influence[tweet.author] = tweet.influence_score
             else:
                 author_influence[tweet.author] = max(
-                    author_influence[tweet.author],
-                    tweet.influence_score
+                    author_influence[tweet.author], tweet.influence_score
                 )
 
         # Aggregate sentiment
@@ -406,7 +452,9 @@ class TwitterClient:
         trending = sorted(hashtag_counts.keys(), key=lambda t: hashtag_counts[t], reverse=True)
 
         # Top influencers
-        top_authors = sorted(author_influence.keys(), key=lambda a: author_influence[a], reverse=True)
+        top_authors = sorted(
+            author_influence.keys(), key=lambda a: author_influence[a], reverse=True
+        )
 
         return TwitterSentiment(
             topic=topic,
@@ -437,12 +485,40 @@ class TwitterClient:
         if extract_keywords:
             # Remove common words
             stop_words = {
-                "will", "the", "a", "an", "in", "on", "at", "by", "for",
-                "to", "of", "and", "or", "be", "is", "are", "was", "were",
-                "this", "that", "these", "those", "it", "its", "what",
-                "when", "where", "who", "how", "which", "before", "after",
+                "will",
+                "the",
+                "a",
+                "an",
+                "in",
+                "on",
+                "at",
+                "by",
+                "for",
+                "to",
+                "of",
+                "and",
+                "or",
+                "be",
+                "is",
+                "are",
+                "was",
+                "were",
+                "this",
+                "that",
+                "these",
+                "those",
+                "it",
+                "its",
+                "what",
+                "when",
+                "where",
+                "who",
+                "how",
+                "which",
+                "before",
+                "after",
             }
-            words = re.findall(r'\b\w+\b', market_question.lower())
+            words = re.findall(r"\b\w+\b", market_question.lower())
             keywords = [w for w in words if w not in stop_words and len(w) > 2]
 
             # Take top 3-4 keywords

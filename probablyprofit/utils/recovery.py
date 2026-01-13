@@ -5,13 +5,14 @@ Provides state checkpointing and crash recovery to ensure
 the bot can resume after unexpected failures.
 """
 
+import asyncio
 import json
 import os
-import asyncio
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
 from loguru import logger
 
 
@@ -150,36 +151,31 @@ class RecoveryManager:
                 timestamp=datetime.now().isoformat(),
                 running=getattr(agent, "running", False),
                 loop_count=self._loop_counts[agent_name],
-
-                last_balance=memory.observations[-1].balance if memory and memory.observations else 0.0,
+                last_balance=(
+                    memory.observations[-1].balance if memory and memory.observations else 0.0
+                ),
                 last_observation_time=(
                     memory.observations[-1].timestamp.isoformat()
-                    if memory and memory.observations else None
+                    if memory and memory.observations
+                    else None
                 ),
                 last_decision_time=(
                     memory.decisions[-1].metadata.get("timestamp")
-                    if memory and memory.decisions else None
+                    if memory and memory.decisions
+                    else None
                 ),
-                last_action=(
-                    memory.decisions[-1].action
-                    if memory and memory.decisions else None
-                ),
-
+                last_action=(memory.decisions[-1].action if memory and memory.decisions else None),
                 pending_decisions=[],
                 total_trades=len(memory.trades) if memory else 0,
                 successful_trades=sum(
-                    1 for t in (memory.trades if memory else [])
-                    if t.status == "filled"
+                    1 for t in (memory.trades if memory else []) if t.status == "filled"
                 ),
                 failed_trades=sum(
-                    1 for t in (memory.trades if memory else [])
-                    if t.status == "failed"
+                    1 for t in (memory.trades if memory else []) if t.status == "failed"
                 ),
-
                 last_error=str(error) if error else None,
                 error_count=getattr(agent, "_error_count", 0),
                 consecutive_errors=getattr(agent, "_consecutive_errors", 0),
-
                 dry_run=getattr(agent, "dry_run", False),
                 loop_interval=getattr(agent, "loop_interval", 60),
                 sizing_method=getattr(agent, "sizing_method", "manual"),
@@ -216,7 +212,7 @@ class RecoveryManager:
         checkpoints = [p for p in checkpoints if "latest" not in p.name]
 
         if len(checkpoints) > self.max_checkpoints:
-            for old_checkpoint in checkpoints[self.max_checkpoints:]:
+            for old_checkpoint in checkpoints[self.max_checkpoints :]:
                 try:
                     old_checkpoint.unlink()
                     logger.debug(f"[Recovery] Removed old checkpoint: {old_checkpoint}")
@@ -245,8 +241,7 @@ class RecoveryManager:
 
             checkpoint = AgentCheckpoint.from_dict(data)
             logger.info(
-                f"[Recovery] Loaded checkpoint for '{agent_name}' "
-                f"from {checkpoint.timestamp}"
+                f"[Recovery] Loaded checkpoint for '{agent_name}' " f"from {checkpoint.timestamp}"
             )
             return checkpoint
 

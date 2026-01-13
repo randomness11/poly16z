@@ -7,11 +7,12 @@ Scrapes relevant subreddits for prediction market alpha.
 
 import asyncio
 import re
-from typing import Any, Dict, List, Optional
 from datetime import datetime, timedelta
-from pydantic import BaseModel
+from typing import Any, Dict, List, Optional
+
 import httpx
 from loguru import logger
+from pydantic import BaseModel
 
 
 class RedditPost(BaseModel):
@@ -71,9 +72,7 @@ class RedditSentiment(BaseModel):
 
         # Top posts by engagement
         top_posts = sorted(
-            [p for p in self.posts if not p.is_comment],
-            key=lambda p: p.engagement,
-            reverse=True
+            [p for p in self.posts if not p.is_comment], key=lambda p: p.engagement, reverse=True
         )[:3]
 
         if top_posts:
@@ -88,17 +87,53 @@ class RedditSentiment(BaseModel):
 
 # Sentiment keywords
 BULLISH_KEYWORDS = [
-    "bullish", "moon", "buy", "long", "calls", "up", "rally",
-    "winning", "confirmed", "happening", "yes", "will win",
-    "undervalued", "cheap", "opportunity", "lfg", "wagmi",
-    "breakout", "pump", "rocket", "soar", "surge"
+    "bullish",
+    "moon",
+    "buy",
+    "long",
+    "calls",
+    "up",
+    "rally",
+    "winning",
+    "confirmed",
+    "happening",
+    "yes",
+    "will win",
+    "undervalued",
+    "cheap",
+    "opportunity",
+    "lfg",
+    "wagmi",
+    "breakout",
+    "pump",
+    "rocket",
+    "soar",
+    "surge",
 ]
 
 BEARISH_KEYWORDS = [
-    "bearish", "dump", "sell", "short", "puts", "down", "crash",
-    "losing", "denied", "not happening", "no", "will lose",
-    "overvalued", "expensive", "trap", "ngmi", "rekt",
-    "breakdown", "tank", "plunge", "collapse", "fail"
+    "bearish",
+    "dump",
+    "sell",
+    "short",
+    "puts",
+    "down",
+    "crash",
+    "losing",
+    "denied",
+    "not happening",
+    "no",
+    "will lose",
+    "overvalued",
+    "expensive",
+    "trap",
+    "ngmi",
+    "rekt",
+    "breakdown",
+    "tank",
+    "plunge",
+    "collapse",
+    "fail",
 ]
 
 
@@ -119,16 +154,33 @@ def analyze_sentiment(text: str) -> float:
 # Subreddits relevant to prediction markets
 DEFAULT_SUBREDDITS = [
     # Crypto & Finance
-    "cryptocurrency", "bitcoin", "ethereum", "wallstreetbets",
-    "stocks", "investing", "economics", "finance",
+    "cryptocurrency",
+    "bitcoin",
+    "ethereum",
+    "wallstreetbets",
+    "stocks",
+    "investing",
+    "economics",
+    "finance",
     # Politics
-    "politics", "news", "worldnews", "conservative", "liberal",
+    "politics",
+    "news",
+    "worldnews",
+    "conservative",
+    "liberal",
     # Sports
-    "sports", "nfl", "nba", "soccer",
+    "sports",
+    "nfl",
+    "nba",
+    "soccer",
     # Prediction markets
-    "polymarket", "predictit", "kalshi",
+    "polymarket",
+    "predictit",
+    "kalshi",
     # General
-    "technology", "science", "futurology",
+    "technology",
+    "science",
+    "futurology",
 ]
 
 
@@ -173,6 +225,7 @@ class RedditClient:
     async def _rate_limit(self):
         """Respect Reddit rate limits."""
         import time
+
         now = time.time()
         elapsed = now - self._last_request
         if elapsed < self._min_interval:
@@ -219,18 +272,20 @@ class RedditClient:
             posts = []
             for child in data.get("data", {}).get("children", []):
                 post_data = child.get("data", {})
-                posts.append(RedditPost(
-                    id=post_data.get("id", ""),
-                    title=post_data.get("title", ""),
-                    text=post_data.get("selftext", ""),
-                    author=post_data.get("author", "[deleted]"),
-                    subreddit=post_data.get("subreddit", subreddit),
-                    score=post_data.get("score", 0),
-                    num_comments=post_data.get("num_comments", 0),
-                    created_at=datetime.fromtimestamp(post_data.get("created_utc", 0)),
-                    url=f"https://reddit.com{post_data.get('permalink', '')}",
-                    is_comment=False,
-                ))
+                posts.append(
+                    RedditPost(
+                        id=post_data.get("id", ""),
+                        title=post_data.get("title", ""),
+                        text=post_data.get("selftext", ""),
+                        author=post_data.get("author", "[deleted]"),
+                        subreddit=post_data.get("subreddit", subreddit),
+                        score=post_data.get("score", 0),
+                        num_comments=post_data.get("num_comments", 0),
+                        created_at=datetime.fromtimestamp(post_data.get("created_utc", 0)),
+                        url=f"https://reddit.com{post_data.get('permalink', '')}",
+                        is_comment=False,
+                    )
+                )
 
             logger.debug(f"r/{subreddit} search returned {len(posts)} posts for '{query}'")
             return posts
@@ -268,18 +323,20 @@ class RedditClient:
                 if post_data.get("stickied", False):
                     continue
 
-                posts.append(RedditPost(
-                    id=post_data.get("id", ""),
-                    title=post_data.get("title", ""),
-                    text=post_data.get("selftext", ""),
-                    author=post_data.get("author", "[deleted]"),
-                    subreddit=post_data.get("subreddit", subreddit),
-                    score=post_data.get("score", 0),
-                    num_comments=post_data.get("num_comments", 0),
-                    created_at=datetime.fromtimestamp(post_data.get("created_utc", 0)),
-                    url=f"https://reddit.com{post_data.get('permalink', '')}",
-                    is_comment=False,
-                ))
+                posts.append(
+                    RedditPost(
+                        id=post_data.get("id", ""),
+                        title=post_data.get("title", ""),
+                        text=post_data.get("selftext", ""),
+                        author=post_data.get("author", "[deleted]"),
+                        subreddit=post_data.get("subreddit", subreddit),
+                        score=post_data.get("score", 0),
+                        num_comments=post_data.get("num_comments", 0),
+                        created_at=datetime.fromtimestamp(post_data.get("created_utc", 0)),
+                        url=f"https://reddit.com{post_data.get('permalink', '')}",
+                        is_comment=False,
+                    )
+                )
 
             return posts
 
@@ -331,15 +388,22 @@ class RedditClient:
             subreddits.extend(["cryptocurrency", "bitcoin", "ethereum", "cryptomarkets"])
 
         # Politics keywords
-        if any(kw in query_lower for kw in ["trump", "biden", "election", "congress", "senate", "president"]):
+        if any(
+            kw in query_lower
+            for kw in ["trump", "biden", "election", "congress", "senate", "president"]
+        ):
             subreddits.extend(["politics", "news", "conservative", "liberal"])
 
         # Sports keywords
-        if any(kw in query_lower for kw in ["nfl", "nba", "super bowl", "championship", "playoffs"]):
+        if any(
+            kw in query_lower for kw in ["nfl", "nba", "super bowl", "championship", "playoffs"]
+        ):
             subreddits.extend(["sports", "nfl", "nba", "sportsbook"])
 
         # Finance keywords
-        if any(kw in query_lower for kw in ["stock", "market", "fed", "interest rate", "inflation"]):
+        if any(
+            kw in query_lower for kw in ["stock", "market", "fed", "interest rate", "inflation"]
+        ):
             subreddits.extend(["wallstreetbets", "stocks", "investing", "economics"])
 
         # Tech keywords
@@ -404,6 +468,7 @@ class RedditClient:
 
             # Weight by engagement (log scale)
             import math
+
             weight = 1 + math.log10(max(post.engagement, 1) + 1)
             sentiment_scores.append(score * weight)
 
@@ -442,11 +507,34 @@ class RedditClient:
         """
         # Extract key terms
         stop_words = {
-            "will", "the", "a", "an", "in", "on", "at", "by", "for",
-            "to", "of", "and", "or", "be", "is", "are", "was", "were",
-            "this", "that", "it", "what", "when", "where", "who", "how",
+            "will",
+            "the",
+            "a",
+            "an",
+            "in",
+            "on",
+            "at",
+            "by",
+            "for",
+            "to",
+            "of",
+            "and",
+            "or",
+            "be",
+            "is",
+            "are",
+            "was",
+            "were",
+            "this",
+            "that",
+            "it",
+            "what",
+            "when",
+            "where",
+            "who",
+            "how",
         }
-        words = re.findall(r'\b\w+\b', market_question.lower())
+        words = re.findall(r"\b\w+\b", market_question.lower())
         keywords = [w for w in words if w not in stop_words and len(w) > 2]
 
         query = " ".join(keywords[:5])

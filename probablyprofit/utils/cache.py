@@ -7,8 +7,9 @@ Provides in-memory caching with time-to-live expiration.
 import asyncio
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, Generic, Optional, TypeVar
 from functools import wraps
+from typing import Any, Callable, Dict, Generic, Optional, TypeVar
+
 from loguru import logger
 
 T = TypeVar("T")
@@ -17,6 +18,7 @@ T = TypeVar("T")
 @dataclass
 class CacheEntry(Generic[T]):
     """A single cache entry with TTL."""
+
     value: T
     expires_at: float
     created_at: float = field(default_factory=time.time)
@@ -152,10 +154,7 @@ class TTLCache(Generic[T]):
         Returns:
             Number of entries removed
         """
-        expired_keys = [
-            key for key, entry in self._cache.items()
-            if entry.is_expired
-        ]
+        expired_keys = [key for key, entry in self._cache.items() if entry.is_expired]
 
         for key in expired_keys:
             del self._cache[key]
@@ -170,10 +169,7 @@ class TTLCache(Generic[T]):
         if not self._cache:
             return
 
-        oldest_key = min(
-            self._cache.keys(),
-            key=lambda k: self._cache[k].created_at
-        )
+        oldest_key = min(self._cache.keys(), key=lambda k: self._cache[k].created_at)
         del self._cache[oldest_key]
         self._evictions += 1
 
@@ -285,6 +281,7 @@ def cached(
         async def fetch_market(market_id: str) -> Market:
             ...
     """
+
     def decorator(func: Callable) -> Callable:
         func_cache = TTLCache(ttl=ttl, name=cache_name or func.__name__)
 

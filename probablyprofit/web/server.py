@@ -4,13 +4,14 @@ Web Server
 Launches FastAPI server alongside the agent loop.
 """
 
-import uvicorn
 import asyncio
-from loguru import logger
 from typing import Optional
 
-from probablyprofit.web.app import create_app, set_agent_state
+import uvicorn
+from loguru import logger
+
 from probablyprofit.agent.base import BaseAgent
+from probablyprofit.web.app import create_app, set_agent_state
 
 
 async def run_server_with_agent(

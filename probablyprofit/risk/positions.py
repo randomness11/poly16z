@@ -5,19 +5,21 @@ Trailing stops, correlation detection, and smart position sizing.
 """
 
 import re
-from typing import Any, Dict, List, Optional, Set, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from pydantic import BaseModel
+from typing import Any, Dict, List, Optional, Set, Tuple
+
 from loguru import logger
+from pydantic import BaseModel
 
 
 class StopType(Enum):
     """Types of stop-loss orders."""
-    FIXED = "fixed"           # Fixed percentage stop
-    TRAILING = "trailing"     # Moves with price
-    BREAKEVEN = "breakeven"   # Move to entry after profit threshold
+
+    FIXED = "fixed"  # Fixed percentage stop
+    TRAILING = "trailing"  # Moves with price
+    BREAKEVEN = "breakeven"  # Move to entry after profit threshold
 
 
 @dataclass
@@ -55,7 +57,7 @@ class TrailingStop:
 
     # Tracking
     highest_price: float = 0.0
-    lowest_price: float = float('inf')
+    lowest_price: float = float("inf")
     current_stop: float = 0.0
     activated: bool = False  # Trailing activated after profit threshold
 
@@ -206,7 +208,7 @@ class CorrelationWarning(BaseModel):
 def extract_keywords(text: str) -> Set[str]:
     """Extract keywords from market question."""
     text_lower = text.lower()
-    words = set(re.findall(r'\b\w+\b', text_lower))
+    words = set(re.findall(r"\b\w+\b", text_lower))
     return words
 
 
@@ -306,7 +308,9 @@ class CorrelationDetector:
                 continue  # Skip low exposure
 
             # Build warning
-            market_questions = [p.get("question", p.get("market_id", "?"))[:50] for p in group_positions]
+            market_questions = [
+                p.get("question", p.get("market_id", "?"))[:50] for p in group_positions
+            ]
 
             warning = CorrelationWarning(
                 group=group,
@@ -372,6 +376,7 @@ class CorrelationDetector:
 # POSITION MANAGER
 # =============================================================================
 
+
 class PositionManager:
     """
     Comprehensive position management.
@@ -420,9 +425,7 @@ class PositionManager:
         self.trailing_stops: Dict[str, TrailingStop] = {}
 
         # Correlation detector
-        self.correlation_detector = CorrelationDetector(
-            exposure_threshold=correlation_threshold
-        )
+        self.correlation_detector = CorrelationDetector(exposure_threshold=correlation_threshold)
 
         logger.info(
             f"PositionManager initialized "
@@ -533,8 +536,7 @@ class PositionManager:
             del self.trailing_stops[market_id]
 
         logger.info(
-            f"📤 Position closed: {market_id} @ ${exit_price:.4f} "
-            f"(P&L: ${realized_pnl:+.2f})"
+            f"📤 Position closed: {market_id} @ ${exit_price:.4f} " f"(P&L: ${realized_pnl:+.2f})"
         )
 
         return position
@@ -563,9 +565,13 @@ class PositionManager:
 
             # Update unrealized P&L
             if position["side"] == "long":
-                position["unrealized_pnl"] = position["size"] * (current_price - position["entry_price"])
+                position["unrealized_pnl"] = position["size"] * (
+                    current_price - position["entry_price"]
+                )
             else:
-                position["unrealized_pnl"] = position["size"] * (position["entry_price"] - current_price)
+                position["unrealized_pnl"] = position["size"] * (
+                    position["entry_price"] - current_price
+                )
 
             position["value"] = position["size"] * current_price
 
@@ -575,14 +581,16 @@ class PositionManager:
                 should_exit, stop_level = stop.update(current_price)
 
                 if should_exit:
-                    actions.append({
-                        "action": "close",
-                        "market_id": market_id,
-                        "reason": "trailing_stop",
-                        "stop_level": stop_level,
-                        "current_price": current_price,
-                        "unrealized_pnl": position["unrealized_pnl"],
-                    })
+                    actions.append(
+                        {
+                            "action": "close",
+                            "market_id": market_id,
+                            "reason": "trailing_stop",
+                            "stop_level": stop_level,
+                            "current_price": current_price,
+                            "unrealized_pnl": position["unrealized_pnl"],
+                        }
+                    )
 
         return actions
 
@@ -608,10 +616,7 @@ class PositionManager:
             "long_value": sum(p["value"] for p in long_positions),
             "short_value": sum(p["value"] for p in short_positions),
             "positions": list(self.positions.values()),
-            "trailing_stops": {
-                mid: stop.get_stats()
-                for mid, stop in self.trailing_stops.items()
-            },
+            "trailing_stops": {mid: stop.get_stats() for mid, stop in self.trailing_stops.items()},
         }
 
     def get_position(self, market_id: str) -> Optional[Dict[str, Any]]:
@@ -634,8 +639,8 @@ class PositionManager:
 
         for pos in self.positions.values():
             pnl_str = f"${pos['unrealized_pnl']:+.2f}"
-            cost_basis = pos['size'] * pos['entry_price']
-            pnl_pct = (pos['unrealized_pnl'] / cost_basis * 100) if cost_basis > 0 else 0.0
+            cost_basis = pos["size"] * pos["entry_price"]
+            pnl_pct = (pos["unrealized_pnl"] / cost_basis * 100) if cost_basis > 0 else 0.0
 
             stop_info = ""
             if pos["market_id"] in self.trailing_stops:

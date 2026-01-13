@@ -1,7 +1,7 @@
 """Quick Backend Test - Fast validation of core functionality."""
 
-import sys
 import os
+import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
@@ -13,6 +13,7 @@ print("=" * 60)
 print("\n1️⃣  Testing FastAPI imports...")
 try:
     from probablyprofit.web.app import create_app
+
     app = create_app()
     print(f"   ✅ App created: {app.title} v{app.version}")
     routes = [r.path for r in app.routes if r.path.startswith("/api")]
@@ -32,7 +33,9 @@ except Exception as e:
 print("\n2️⃣  Testing API response models...")
 try:
     from datetime import datetime
-    from probablyprofit.web.api.models import StatusResponse, TradeResponse, PerformanceResponse
+
+    from probablyprofit.web.api.models import (PerformanceResponse,
+                                               StatusResponse, TradeResponse)
 
     status = StatusResponse(
         running=True,
@@ -71,7 +74,9 @@ try:
         win_rate=0.75,
         total_trades=20,
     )
-    print(f"   ✅ PerformanceResponse: {perf.total_return_pct:.1%} return, {perf.win_rate:.0%} win rate")
+    print(
+        f"   ✅ PerformanceResponse: {perf.total_return_pct:.1%} return, {perf.win_rate:.0%} win rate"
+    )
 except Exception as e:
     print(f"   ❌ Failed: {e}")
     sys.exit(1)
@@ -91,7 +96,8 @@ except Exception as e:
 # Test 4: Database models
 print("\n4️⃣  Testing database models...")
 try:
-    from probablyprofit.storage.models import TradeRecord, ObservationRecord, DecisionRecord
+    from probablyprofit.storage.models import (DecisionRecord,
+                                               ObservationRecord, TradeRecord)
 
     print(f"   ✅ TradeRecord model available")
     print(f"   ✅ ObservationRecord model available")

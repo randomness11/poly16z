@@ -4,13 +4,14 @@ Database Manager
 Handles database connections and session management with async support.
 """
 
-from sqlmodel import create_engine, Session, SQLModel
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
+import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional
+
 from loguru import logger
-import os
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
+from sqlmodel import Session, SQLModel, create_engine
 
 
 class DatabaseManager:
@@ -21,9 +22,7 @@ class DatabaseManager:
         self.engine = create_async_engine(
             database_url,
             echo=False,
-            connect_args={"check_same_thread": False}
-            if "sqlite" in database_url
-            else {},
+            connect_args={"check_same_thread": False} if "sqlite" in database_url else {},
         )
         self.async_session_maker = sessionmaker(
             self.engine, class_=AsyncSession, expire_on_commit=False

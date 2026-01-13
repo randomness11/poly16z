@@ -7,6 +7,7 @@ Run this to quickly test the framework with a simple bot.
 
 import asyncio
 import os
+
 from dotenv import load_dotenv
 
 # Load environment
@@ -25,7 +26,7 @@ if missing_vars:
     exit(1)
 
 # Import framework
-from poly16z import PolymarketClient, AnthropicAgent, RiskManager
+from poly16z import AnthropicAgent, PolymarketClient, RiskManager
 from poly16z.utils import setup_logging
 
 # Simple test strategy
@@ -131,6 +132,7 @@ async def main():
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
         await client.close()
 

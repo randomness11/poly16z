@@ -6,9 +6,10 @@ for profitable arbitrage opportunities.
 """
 
 import asyncio
-from typing import List, Optional, Dict, Any
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 from loguru import logger
 from pydantic import BaseModel
 
@@ -158,18 +159,14 @@ class ArbitrageDetector:
 
         if self.polymarket_client:
             try:
-                poly_markets = await self.polymarket_client.get_markets(
-                    active=True, limit=100
-                )
+                poly_markets = await self.polymarket_client.get_markets(active=True, limit=100)
                 logger.info(f"Fetched {len(poly_markets)} Polymarket markets")
             except Exception as e:
                 logger.error(f"Failed to fetch Polymarket markets: {e}")
 
         if self.kalshi_client:
             try:
-                kalshi_markets = await self.kalshi_client.get_markets(
-                    status="open", limit=100
-                )
+                kalshi_markets = await self.kalshi_client.get_markets(status="open", limit=100)
                 logger.info(f"Fetched {len(kalshi_markets)} Kalshi markets")
             except Exception as e:
                 logger.error(f"Failed to fetch Kalshi markets: {e}")
@@ -203,15 +200,19 @@ class ArbitrageDetector:
                     polymarket_id=match.polymarket_id,
                     polymarket_question=match.polymarket_question,
                     polymarket_yes_price=poly_market.outcome_prices[0],
-                    polymarket_no_price=poly_market.outcome_prices[1]
-                    if len(poly_market.outcome_prices) > 1
-                    else 1 - poly_market.outcome_prices[0],
+                    polymarket_no_price=(
+                        poly_market.outcome_prices[1]
+                        if len(poly_market.outcome_prices) > 1
+                        else 1 - poly_market.outcome_prices[0]
+                    ),
                     kalshi_ticker=match.kalshi_ticker,
                     kalshi_question=match.kalshi_question,
                     kalshi_yes_price=kalshi_market.outcome_prices[0],
-                    kalshi_no_price=kalshi_market.outcome_prices[1]
-                    if len(kalshi_market.outcome_prices) > 1
-                    else 1 - kalshi_market.outcome_prices[0],
+                    kalshi_no_price=(
+                        kalshi_market.outcome_prices[1]
+                        if len(kalshi_market.outcome_prices) > 1
+                        else 1 - kalshi_market.outcome_prices[0]
+                    ),
                     similarity_score=match.similarity_score,
                     matched_keywords=match.matched_keywords,
                 )
@@ -252,9 +253,7 @@ class ArbitrageDetector:
         combined_1 = pair.polymarket_yes_price + pair.kalshi_no_price
         if combined_1 < 1.0:
             gross_profit = 1.0 - combined_1
-            fees = self._calculate_fees(
-                pair.polymarket_yes_price, pair.kalshi_no_price
-            )
+            fees = self._calculate_fees(pair.polymarket_yes_price, pair.kalshi_no_price)
             net_profit = gross_profit - fees
 
             if net_profit / combined_1 >= self.config.min_profit_pct:
@@ -273,9 +272,7 @@ class ArbitrageDetector:
                     estimated_fees=fees,
                     net_profit=net_profit,
                     net_profit_pct=net_profit / combined_1,
-                    price_spread=abs(
-                        pair.polymarket_yes_price - (1 - pair.kalshi_no_price)
-                    ),
+                    price_spread=abs(pair.polymarket_yes_price - (1 - pair.kalshi_no_price)),
                     confidence=self._calculate_confidence(pair),
                 )
                 opportunities.append(opp)
@@ -284,9 +281,7 @@ class ArbitrageDetector:
         combined_2 = pair.polymarket_no_price + pair.kalshi_yes_price
         if combined_2 < 1.0:
             gross_profit = 1.0 - combined_2
-            fees = self._calculate_fees(
-                pair.polymarket_no_price, pair.kalshi_yes_price
-            )
+            fees = self._calculate_fees(pair.polymarket_no_price, pair.kalshi_yes_price)
             net_profit = gross_profit - fees
 
             if net_profit / combined_2 >= self.config.min_profit_pct:
@@ -305,9 +300,7 @@ class ArbitrageDetector:
                     estimated_fees=fees,
                     net_profit=net_profit,
                     net_profit_pct=net_profit / combined_2,
-                    price_spread=abs(
-                        pair.polymarket_no_price - (1 - pair.kalshi_yes_price)
-                    ),
+                    price_spread=abs(pair.polymarket_no_price - (1 - pair.kalshi_yes_price)),
                     confidence=self._calculate_confidence(pair),
                 )
                 opportunities.append(opp)

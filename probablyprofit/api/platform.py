@@ -5,7 +5,8 @@ Provides a unified interface for different prediction market platforms.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel
 
 
@@ -98,10 +99,7 @@ class PlatformClient(ABC):
         pass
 
 
-def create_platform_client(
-    platform: str,
-    **kwargs
-) -> PlatformClient:
+def create_platform_client(platform: str, **kwargs) -> PlatformClient:
     """
     Factory function to create platform clients.
 
@@ -114,6 +112,7 @@ def create_platform_client(
     """
     if platform.lower() == "polymarket":
         from probablyprofit.api.client import PolymarketClient
+
         return PolymarketClient(
             private_key=kwargs.get("private_key"),
             chain_id=kwargs.get("chain_id", 137),
@@ -122,6 +121,7 @@ def create_platform_client(
 
     elif platform.lower() == "kalshi":
         from probablyprofit.api.kalshi_client import KalshiClient
+
         return KalshiClient(
             api_key_id=kwargs.get("api_key_id"),
             private_key_path=kwargs.get("private_key_path"),

@@ -5,14 +5,15 @@ Main FastAPI app for the probablyprofit dashboard.
 """
 
 import os
-from pathlib import Path
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
+from typing import Optional
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 from probablyprofit.agent.base import BaseAgent
 from probablyprofit.web.api.routes import router as api_router
@@ -89,12 +90,14 @@ def create_app() -> FastAPI:
                 return FileResponse(file_path)
             # Return React app for client-side routing
             return FileResponse(STATIC_DIR / "index.html")
+
     else:
         # Fallback to simple HTML dashboard
         @app.get("/", response_class=HTMLResponse)
         async def dashboard():
             """Serve the simple dashboard UI."""
             from probablyprofit.web.dashboard import DASHBOARD_HTML
+
             return DASHBOARD_HTML
 
     @app.get("/health")

@@ -1,8 +1,10 @@
 """
 Comprehensive tests for the Risk Manager.
 """
+
 import pytest
-from probablyprofit.risk.manager import RiskManager, RiskLimits
+
+from probablyprofit.risk.manager import RiskLimits, RiskManager
 
 
 class TestRiskLimits:
@@ -118,9 +120,7 @@ class TestPositionSizing:
 
     def test_fixed_pct_sizing(self, risk_manager):
         # 5% of 1000 = 50, at price 0.5 = 100 shares
-        size = risk_manager.calculate_position_size(
-            price=0.5, confidence=0.5, method="fixed_pct"
-        )
+        size = risk_manager.calculate_position_size(price=0.5, confidence=0.5, method="fixed_pct")
         assert size == pytest.approx(100.0, rel=0.01)
 
     def test_confidence_based_sizing(self, risk_manager):
@@ -138,9 +138,7 @@ class TestPositionSizing:
         assert size == pytest.approx(100.0, rel=0.01)
 
     def test_dynamic_sizing_basic(self, risk_manager):
-        size = risk_manager.calculate_position_size(
-            price=0.5, confidence=0.7, method="dynamic"
-        )
+        size = risk_manager.calculate_position_size(price=0.5, confidence=0.7, method="dynamic")
         assert size > 0
 
     def test_sizing_respects_max_limit(self, risk_manager):
@@ -164,39 +162,39 @@ class TestStopLossAndTakeProfit:
 
     def test_stop_loss_triggers(self, risk_manager):
         # 40% loss should trigger at 20% threshold
-        assert risk_manager.should_stop_loss(
-            entry_price=0.5, current_price=0.3, size=100
-        ) is True
+        assert risk_manager.should_stop_loss(entry_price=0.5, current_price=0.3, size=100) is True
 
     def test_stop_loss_not_triggered(self, risk_manager):
         # 10% loss should not trigger at 20% threshold
-        assert risk_manager.should_stop_loss(
-            entry_price=0.5, current_price=0.45, size=100
-        ) is False
+        assert risk_manager.should_stop_loss(entry_price=0.5, current_price=0.45, size=100) is False
 
     def test_stop_loss_custom_threshold(self, risk_manager):
         # 15% loss with 10% threshold should trigger
-        assert risk_manager.should_stop_loss(
-            entry_price=0.5, current_price=0.425, size=100, stop_loss_pct=0.10
-        ) is True
+        assert (
+            risk_manager.should_stop_loss(
+                entry_price=0.5, current_price=0.425, size=100, stop_loss_pct=0.10
+            )
+            is True
+        )
 
     def test_take_profit_triggers(self, risk_manager):
         # 60% profit should trigger at 50% threshold
-        assert risk_manager.should_take_profit(
-            entry_price=0.5, current_price=0.8, size=100
-        ) is True
+        assert risk_manager.should_take_profit(entry_price=0.5, current_price=0.8, size=100) is True
 
     def test_take_profit_not_triggered(self, risk_manager):
         # 20% profit should not trigger at 50% threshold
-        assert risk_manager.should_take_profit(
-            entry_price=0.5, current_price=0.6, size=100
-        ) is False
+        assert (
+            risk_manager.should_take_profit(entry_price=0.5, current_price=0.6, size=100) is False
+        )
 
     def test_take_profit_custom_threshold(self, risk_manager):
         # 30% profit with 25% threshold should trigger
-        assert risk_manager.should_take_profit(
-            entry_price=0.5, current_price=0.65, size=100, take_profit_pct=0.25
-        ) is True
+        assert (
+            risk_manager.should_take_profit(
+                entry_price=0.5, current_price=0.65, size=100, take_profit_pct=0.25
+            )
+            is True
+        )
 
 
 class TestTradeRecording:
@@ -262,7 +260,7 @@ class TestStats:
         stats = risk_manager.get_stats()
         assert stats["total_trades"] == 3
         assert stats["total_pnl"] == 25.0
-        assert stats["win_rate"] == pytest.approx(2/3, rel=0.01)
+        assert stats["win_rate"] == pytest.approx(2 / 3, rel=0.01)
 
     def test_reset_daily_stats(self, risk_manager):
         risk_manager.daily_pnl = 100.0
@@ -274,30 +272,18 @@ class TestDynamicSizing:
     """Tests for dynamic position sizing with multiple factors."""
 
     def test_dynamic_reduces_on_losing_streak(self, risk_manager):
-        size_normal = risk_manager._dynamic_size(
-            price=0.5, confidence=0.7, lose_streak=0
-        )
-        size_losing = risk_manager._dynamic_size(
-            price=0.5, confidence=0.7, lose_streak=3
-        )
+        size_normal = risk_manager._dynamic_size(price=0.5, confidence=0.7, lose_streak=0)
+        size_losing = risk_manager._dynamic_size(price=0.5, confidence=0.7, lose_streak=3)
         assert size_losing < size_normal
 
     def test_dynamic_increases_on_winning_streak(self, risk_manager):
-        size_normal = risk_manager._dynamic_size(
-            price=0.5, confidence=0.7, win_streak=0
-        )
-        size_winning = risk_manager._dynamic_size(
-            price=0.5, confidence=0.7, win_streak=5
-        )
+        size_normal = risk_manager._dynamic_size(price=0.5, confidence=0.7, win_streak=0)
+        size_winning = risk_manager._dynamic_size(price=0.5, confidence=0.7, win_streak=5)
         assert size_winning > size_normal
 
     def test_dynamic_reduces_in_high_volatility(self, risk_manager):
-        size_low_vol = risk_manager._dynamic_size(
-            price=0.5, confidence=0.7, volatility=0.2
-        )
-        size_high_vol = risk_manager._dynamic_size(
-            price=0.5, confidence=0.7, volatility=0.8
-        )
+        size_low_vol = risk_manager._dynamic_size(price=0.5, confidence=0.7, volatility=0.2)
+        size_high_vol = risk_manager._dynamic_size(price=0.5, confidence=0.7, volatility=0.8)
         assert size_high_vol < size_low_vol
 
     def test_dynamic_reduces_after_losses(self, risk_manager):

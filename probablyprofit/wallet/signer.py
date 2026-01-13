@@ -5,10 +5,11 @@ Handles wallet connection and transaction signing for Polymarket.
 """
 
 from typing import Optional
+
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
-from web3 import Web3
 from loguru import logger
+from web3 import Web3
 
 
 class WalletSigner:

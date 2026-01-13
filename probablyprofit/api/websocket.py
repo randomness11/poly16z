@@ -9,11 +9,13 @@ import json
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Set
+
 from loguru import logger
 
 try:
     import websockets
     from websockets.client import WebSocketClientProtocol
+
     WEBSOCKETS_AVAILABLE = True
 except ImportError:
     WEBSOCKETS_AVAILABLE = False
@@ -23,6 +25,7 @@ except ImportError:
 @dataclass
 class PriceUpdate:
     """Represents a real-time price update."""
+
     market_id: str
     outcome: str
     price: float
@@ -34,6 +37,7 @@ class PriceUpdate:
 @dataclass
 class OrderbookUpdate:
     """Represents an orderbook update."""
+
     market_id: str
     outcome: str
     bids: List[tuple]  # [(price, size), ...]
@@ -223,11 +227,13 @@ class WebSocketClient:
 
         try:
             for market_id in market_ids:
-                msg = json.dumps({
-                    "type": "subscribe",
-                    "channel": "market",
-                    "market": market_id,
-                })
+                msg = json.dumps(
+                    {
+                        "type": "subscribe",
+                        "channel": "market",
+                        "market": market_id,
+                    }
+                )
                 await self._ws.send(msg)
                 logger.debug(f"[WebSocket] Subscribed to {market_id}")
 
@@ -244,11 +250,13 @@ class WebSocketClient:
 
         try:
             for market_id in market_ids:
-                msg = json.dumps({
-                    "type": "unsubscribe",
-                    "channel": "market",
-                    "market": market_id,
-                })
+                msg = json.dumps(
+                    {
+                        "type": "unsubscribe",
+                        "channel": "market",
+                        "market": market_id,
+                    }
+                )
                 await self._ws.send(msg)
 
             return True
@@ -429,7 +437,9 @@ class WebSocketClient:
             "connected": self.is_connected,
             "subscriptions": len(self._subscriptions),
             "messages_received": self._messages_received,
-            "last_message_time": self._last_message_time.isoformat() if self._last_message_time else None,
+            "last_message_time": (
+                self._last_message_time.isoformat() if self._last_message_time else None
+            ),
             "reconnect_count": self._reconnect_count,
         }
 

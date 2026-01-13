@@ -1,11 +1,13 @@
 """
 Tests for TTL Cache utilities.
 """
-import pytest
+
 import asyncio
 import time
 
-from probablyprofit.utils.cache import TTLCache, AsyncTTLCache, cached
+import pytest
+
+from probablyprofit.utils.cache import AsyncTTLCache, TTLCache, cached
 
 
 class TestTTLCache:
@@ -81,7 +83,7 @@ class TestTTLCache:
         assert stats["size"] == 1
         assert stats["hits"] == 2
         assert stats["misses"] == 1
-        assert stats["hit_rate"] == pytest.approx(2/3, rel=0.01)
+        assert stats["hit_rate"] == pytest.approx(2 / 3, rel=0.01)
 
     def test_cleanup_expired(self):
         cache = TTLCache(ttl=0.1)
@@ -181,5 +183,5 @@ class TestCachedDecorator:
         assert result == 3
 
         # Access cache stats
-        assert hasattr(add, 'cache')
+        assert hasattr(add, "cache")
         assert add.cache.size == 1

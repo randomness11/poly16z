@@ -1,9 +1,10 @@
 """AI Agent framework."""
 
-from probablyprofit.agent.base import BaseAgent
 from probablyprofit.agent.anthropic_agent import AnthropicAgent
+from probablyprofit.agent.base import BaseAgent
 from probablyprofit.agent.ensemble import EnsembleAgent, VotingStrategy
-from probablyprofit.agent.fallback import FallbackAgent, create_fallback_agent, FallbackConfig
+from probablyprofit.agent.fallback import (FallbackAgent, FallbackConfig,
+                                           create_fallback_agent)
 
 # Optional AI providers
 try:
@@ -34,4 +35,3 @@ __all__ = [
     "create_fallback_agent",
     "FallbackConfig",
 ]
-

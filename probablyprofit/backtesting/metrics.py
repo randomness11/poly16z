@@ -4,7 +4,8 @@ Performance Metrics
 Calculates various performance metrics for trading strategies.
 """
 
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
 import numpy as np
 import pandas as pd
 from loguru import logger
@@ -181,11 +182,7 @@ class PerformanceMetrics:
             losses = [p for p in pnls if p < 0]
 
             win_rate = len(wins) / len(pnls) if pnls else 0.0
-            profit_factor = (
-                sum(wins) / abs(sum(losses))
-                if losses and sum(losses) != 0
-                else 0.0
-            )
+            profit_factor = sum(wins) / abs(sum(losses)) if losses and sum(losses) != 0 else 0.0
         else:
             win_rate = 0.0
             profit_factor = 0.0

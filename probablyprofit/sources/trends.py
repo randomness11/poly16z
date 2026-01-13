@@ -6,11 +6,12 @@ Rising search interest often precedes price movements.
 """
 
 import asyncio
-from typing import Any, Dict, List, Optional
 from datetime import datetime, timedelta
-from pydantic import BaseModel
+from typing import Any, Dict, List, Optional
+
 import httpx
 from loguru import logger
+from pydantic import BaseModel
 
 
 class TrendData(BaseModel):
@@ -63,7 +64,9 @@ class TrendsSentiment(BaseModel):
         # Individual keywords
         for kw in self.keywords[:5]:
             icon = "🔥" if kw.is_spiking else ("📈" if kw.is_trending else "➖")
-            lines.append(f"  {icon} '{kw.keyword}': {kw.current_interest}/100 ({kw.percent_change:+.0f}% vs avg)")
+            lines.append(
+                f"  {icon} '{kw.keyword}': {kw.current_interest}/100 ({kw.percent_change:+.0f}% vs avg)"
+            )
 
         # Related queries
         all_related = []
@@ -110,6 +113,7 @@ class GoogleTrendsClient:
     async def _rate_limit(self):
         """Basic rate limiting."""
         import time
+
         now = time.time()
         elapsed = now - self._last_request
         if elapsed < self._min_interval:
@@ -210,6 +214,7 @@ class GoogleTrendsClient:
                 text = text[5:]
 
             import json
+
             data = json.loads(text)
 
             # Search for our keyword in trending stories
@@ -271,6 +276,7 @@ class GoogleTrendsClient:
                 text = text[5:]
 
             import json
+
             data = json.loads(text)
 
             trending = []
@@ -360,18 +366,47 @@ class GoogleTrendsClient:
 
         # Remove common words
         stop_words = {
-            "will", "the", "a", "an", "in", "on", "at", "by", "for",
-            "to", "of", "and", "or", "be", "is", "are", "was", "were",
-            "this", "that", "it", "what", "when", "where", "who", "how",
-            "before", "after", "than", "more", "less", "any", "some",
+            "will",
+            "the",
+            "a",
+            "an",
+            "in",
+            "on",
+            "at",
+            "by",
+            "for",
+            "to",
+            "of",
+            "and",
+            "or",
+            "be",
+            "is",
+            "are",
+            "was",
+            "were",
+            "this",
+            "that",
+            "it",
+            "what",
+            "when",
+            "where",
+            "who",
+            "how",
+            "before",
+            "after",
+            "than",
+            "more",
+            "less",
+            "any",
+            "some",
         }
 
         # Find words and phrases
-        words = re.findall(r'\b\w+\b', topic.lower())
+        words = re.findall(r"\b\w+\b", topic.lower())
         keywords = [w for w in words if w not in stop_words and len(w) > 2]
 
         # Also try to find named entities (capitalized words in original)
-        named = re.findall(r'\b[A-Z][a-z]+\b', topic)
+        named = re.findall(r"\b[A-Z][a-z]+\b", topic)
         keywords = named + keywords
 
         return keywords[:5]

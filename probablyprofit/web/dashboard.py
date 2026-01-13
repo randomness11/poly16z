@@ -5,7 +5,7 @@ A beautiful single-page dashboard that connects to the FastAPI backend.
 This is served directly by the FastAPI app, no build step needed.
 """
 
-DASHBOARD_HTML = '''<!DOCTYPE html>
+DASHBOARD_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -554,4 +554,4 @@ DASHBOARD_HTML = '''<!DOCTYPE html>
     </script>
 </body>
 </html>
-'''
+"""

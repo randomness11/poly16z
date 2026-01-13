@@ -7,10 +7,11 @@ Aggregates Twitter, Reddit, Google Trends, and news for smarter decisions.
 
 import os
 from typing import Any, List, Optional
+
 from loguru import logger
 
 from probablyprofit.agent.base import BaseAgent, Decision, Observation
-from probablyprofit.api.client import PolymarketClient, Market
+from probablyprofit.api.client import Market, PolymarketClient
 from probablyprofit.risk.manager import RiskManager
 
 
@@ -75,6 +76,7 @@ class IntelligenceAgent(BaseAgent):
         if enable_aggregator:
             try:
                 from probablyprofit.sources.aggregator import SignalAggregator
+
                 self.aggregator = SignalAggregator(
                     twitter_token=twitter_token or os.getenv("TWITTER_BEARER_TOKEN"),
                     perplexity_key=perplexity_api_key or os.getenv("PERPLEXITY_API_KEY"),
@@ -88,6 +90,7 @@ class IntelligenceAgent(BaseAgent):
         if not enable_aggregator and perplexity_api_key:
             try:
                 from probablyprofit.sources.perplexity import PerplexityClient
+
                 self.perplexity = PerplexityClient(api_key=perplexity_api_key)
                 logger.info("📰 News intelligence enabled via Perplexity")
             except ImportError:
@@ -98,16 +101,17 @@ class IntelligenceAgent(BaseAgent):
         if enable_sentiment and not enable_aggregator:
             try:
                 from probablyprofit.sources.sentiment import SentimentAnalyzer
+
                 self.sentiment_analyzer = SentimentAnalyzer()
                 logger.info("📊 Sentiment analysis enabled")
             except ImportError:
                 logger.warning("Sentiment analyzer not available")
-    
+
     def _get_top_markets(self, markets: List[Market], n: int) -> List[Market]:
         """Get top N markets by volume."""
         sorted_markets = sorted(markets, key=lambda m: m.volume, reverse=True)
         return sorted_markets[:n]
-    
+
     async def _enrich_observation(self, observation: Observation) -> Observation:
         """
         Enrich observation with intelligence data.
@@ -192,19 +196,19 @@ class IntelligenceAgent(BaseAgent):
             observation.market_sentiments = market_sentiments
 
         return observation
-    
+
     async def observe(self) -> Observation:
         """
         Observe with intelligence enrichment.
         """
         # Get base observation
         observation = await super().observe()
-        
+
         # Enrich with intelligence
         observation = await self._enrich_observation(observation)
-        
+
         return observation
-    
+
     async def decide(self, observation: Observation) -> Decision:
         """
         Delegate decision to wrapped agent with enriched observation.

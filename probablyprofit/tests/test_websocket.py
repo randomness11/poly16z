@@ -1,22 +1,22 @@
 """
 Tests for WebSocket Client.
 """
-import pytest
+
 import asyncio
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 # Check if websockets is available
 try:
     import websockets
+
     WEBSOCKETS_AVAILABLE = True
 except ImportError:
     WEBSOCKETS_AVAILABLE = False
 
-pytestmark = pytest.mark.skipif(
-    not WEBSOCKETS_AVAILABLE,
-    reason="websockets package not installed"
-)
+pytestmark = pytest.mark.skipif(not WEBSOCKETS_AVAILABLE, reason="websockets package not installed")
 
 
 class TestPriceUpdate:
@@ -80,9 +80,7 @@ class TestWebSocketClient:
 
         client = WebSocketClient()
         # Subscribe adds to pending subscriptions even when not connected
-        asyncio.get_event_loop().run_until_complete(
-            client.subscribe(["0x123", "0x456"])
-        )
+        asyncio.get_event_loop().run_until_complete(client.subscribe(["0x123", "0x456"]))
         assert "0x123" in client._subscriptions
         assert "0x456" in client._subscriptions
 

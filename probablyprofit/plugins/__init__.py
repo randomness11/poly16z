@@ -9,16 +9,11 @@ Extensible plugin architecture for adding custom:
 - Output handlers
 """
 
+from probablyprofit.plugins.base import (AgentPlugin, BasePlugin,
+                                         DataSourcePlugin, OutputPlugin,
+                                         RiskPlugin, StrategyPlugin)
+from probablyprofit.plugins.hooks import Hook, HookManager
 from probablyprofit.plugins.registry import PluginRegistry, PluginType
-from probablyprofit.plugins.base import (
-    BasePlugin,
-    DataSourcePlugin,
-    AgentPlugin,
-    StrategyPlugin,
-    RiskPlugin,
-    OutputPlugin,
-)
-from probablyprofit.plugins.hooks import HookManager, Hook
 
 # Global registry instance
 registry = PluginRegistry()
@@ -29,7 +24,7 @@ __all__ = [
     "PluginType",
     "BasePlugin",
     "DataSourcePlugin",
-    "AgentPlugin", 
+    "AgentPlugin",
     "StrategyPlugin",
     "RiskPlugin",
     "OutputPlugin",

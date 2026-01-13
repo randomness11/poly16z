@@ -10,10 +10,12 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
 from loguru import logger
 
 try:
     import aiosqlite
+
     AIOSQLITE_AVAILABLE = True
 except ImportError:
     AIOSQLITE_AVAILABLE = False
@@ -22,6 +24,7 @@ except ImportError:
 @dataclass
 class MarketSnapshot:
     """A snapshot of a market at a point in time."""
+
     condition_id: str
     question: str
     timestamp: datetime
@@ -35,6 +38,7 @@ class MarketSnapshot:
 @dataclass
 class PricePoint:
     """A single price point in time series."""
+
     condition_id: str
     timestamp: datetime
     yes_price: float
@@ -93,7 +97,8 @@ class HistoricalDataStore:
         """Initialize database schema."""
         async with aiosqlite.connect(self.db_path) as db:
             # Market snapshots table
-            await db.execute("""
+            await db.execute(
+                """
                 CREATE TABLE IF NOT EXISTS market_snapshots (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     condition_id TEXT NOT NULL,
@@ -106,21 +111,27 @@ class HistoricalDataStore:
                     metadata TEXT,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """
+            )
 
             # Index for efficient queries
-            await db.execute("""
+            await db.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_snapshots_market_time
                 ON market_snapshots (condition_id, timestamp)
-            """)
+            """
+            )
 
-            await db.execute("""
+            await db.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_snapshots_timestamp
                 ON market_snapshots (timestamp)
-            """)
+            """
+            )
 
             # Price points table (more granular)
-            await db.execute("""
+            await db.execute(
+                """
                 CREATE TABLE IF NOT EXISTS price_points (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     condition_id TEXT NOT NULL,
@@ -130,15 +141,19 @@ class HistoricalDataStore:
                     volume REAL DEFAULT 0,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """
+            )
 
-            await db.execute("""
+            await db.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_prices_market_time
                 ON price_points (condition_id, timestamp)
-            """)
+            """
+            )
 
             # Trade history table
-            await db.execute("""
+            await db.execute(
+                """
                 CREATE TABLE IF NOT EXISTS trade_history (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     market_id TEXT NOT NULL,
@@ -153,12 +168,15 @@ class HistoricalDataStore:
                     metadata TEXT,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """
+            )
 
-            await db.execute("""
+            await db.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_trades_timestamp
                 ON trade_history (timestamp)
-            """)
+            """
+            )
 
             await db.commit()
 
@@ -206,7 +224,7 @@ class HistoricalDataStore:
                     volume,
                     liquidity,
                     json.dumps(metadata) if metadata else None,
-                )
+                ),
             )
             await db.commit()
 
@@ -234,7 +252,7 @@ class HistoricalDataStore:
                     yes_price,
                     no_price,
                     volume,
-                )
+                ),
             )
             await db.commit()
 
@@ -272,7 +290,7 @@ class HistoricalDataStore:
                     agent_name,
                     strategy,
                     json.dumps(metadata) if metadata else None,
-                )
+                ),
             )
             await db.commit()
 
@@ -307,7 +325,7 @@ class HistoricalDataStore:
                 WHERE condition_id = ? AND timestamp >= ?
                 ORDER BY timestamp ASC
                 """,
-                (condition_id, start_time.isoformat())
+                (condition_id, start_time.isoformat()),
             )
 
             rows = await cursor.fetchall()
@@ -320,7 +338,7 @@ class HistoricalDataStore:
                 WHERE condition_id = ? AND timestamp >= ?
                 ORDER BY timestamp ASC
                 """,
-                (condition_id, start_time.isoformat())
+                (condition_id, start_time.isoformat()),
             )
 
             snapshot_rows = await cursor.fetchall()
@@ -332,13 +350,15 @@ class HistoricalDataStore:
         # Convert to PricePoints
         points = []
         for row in all_data:
-            points.append(PricePoint(
-                condition_id=row[0],
-                timestamp=datetime.fromisoformat(row[1]) if isinstance(row[1], str) else row[1],
-                yes_price=row[2],
-                no_price=row[3],
-                volume=row[4] or 0.0,
-            ))
+            points.append(
+                PricePoint(
+                    condition_id=row[0],
+                    timestamp=datetime.fromisoformat(row[1]) if isinstance(row[1], str) else row[1],
+                    yes_price=row[2],
+                    no_price=row[3],
+                    volume=row[4] or 0.0,
+                )
+            )
 
         return points
 
@@ -388,16 +408,22 @@ class HistoricalDataStore:
 
         snapshots = []
         for row in rows:
-            snapshots.append(MarketSnapshot(
-                condition_id=row["condition_id"],
-                question=row["question"] or "",
-                timestamp=datetime.fromisoformat(row["timestamp"]) if isinstance(row["timestamp"], str) else row["timestamp"],
-                yes_price=row["yes_price"],
-                no_price=row["no_price"],
-                volume=row["volume"] or 0.0,
-                liquidity=row["liquidity"] or 0.0,
-                metadata=json.loads(row["metadata"]) if row["metadata"] else {},
-            ))
+            snapshots.append(
+                MarketSnapshot(
+                    condition_id=row["condition_id"],
+                    question=row["question"] or "",
+                    timestamp=(
+                        datetime.fromisoformat(row["timestamp"])
+                        if isinstance(row["timestamp"], str)
+                        else row["timestamp"]
+                    ),
+                    yes_price=row["yes_price"],
+                    no_price=row["no_price"],
+                    volume=row["volume"] or 0.0,
+                    liquidity=row["liquidity"] or 0.0,
+                    metadata=json.loads(row["metadata"]) if row["metadata"] else {},
+                )
+            )
 
         return snapshots
 
@@ -473,9 +499,7 @@ class HistoricalDataStore:
         current_candle = None
 
         for point in history:
-            candle_start = point.timestamp.replace(
-                minute=0, second=0, microsecond=0
-            )
+            candle_start = point.timestamp.replace(minute=0, second=0, microsecond=0)
 
             if current_candle is None or point.timestamp >= current_candle["close_time"]:
                 # Start new candle
@@ -518,14 +542,12 @@ class HistoricalDataStore:
 
         async with aiosqlite.connect(self.db_path) as db:
             cursor = await db.execute(
-                "DELETE FROM market_snapshots WHERE timestamp < ?",
-                (cutoff.isoformat(),)
+                "DELETE FROM market_snapshots WHERE timestamp < ?", (cutoff.isoformat(),)
             )
             total_deleted += cursor.rowcount
 
             cursor = await db.execute(
-                "DELETE FROM price_points WHERE timestamp < ?",
-                (cutoff.isoformat(),)
+                "DELETE FROM price_points WHERE timestamp < ?", (cutoff.isoformat(),)
             )
             total_deleted += cursor.rowcount
 
@@ -551,9 +573,7 @@ class HistoricalDataStore:
             cursor = await db.execute("SELECT COUNT(*) FROM trade_history")
             trade_count = (await cursor.fetchone())[0]
 
-            cursor = await db.execute(
-                "SELECT COUNT(DISTINCT condition_id) FROM market_snapshots"
-            )
+            cursor = await db.execute("SELECT COUNT(DISTINCT condition_id) FROM market_snapshots")
             market_count = (await cursor.fetchone())[0]
 
         return {

@@ -14,50 +14,52 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Set
+
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from probablyprofit.api.exceptions import (
-    OrderException,
-    OrderNotFoundError,
-    OrderCancelError,
-    OrderModifyError,
-    PartialFillError,
-    ValidationException,
-)
+from probablyprofit.api.exceptions import (OrderCancelError, OrderException,
+                                           OrderModifyError,
+                                           OrderNotFoundError,
+                                           PartialFillError,
+                                           ValidationException)
 from probablyprofit.config import get_config
 
 
 class OrderStatus(str, Enum):
     """Order lifecycle states."""
-    PENDING = "pending"           # Created, not yet submitted
-    SUBMITTED = "submitted"       # Sent to exchange
-    OPEN = "open"                 # Active on orderbook
+
+    PENDING = "pending"  # Created, not yet submitted
+    SUBMITTED = "submitted"  # Sent to exchange
+    OPEN = "open"  # Active on orderbook
     PARTIALLY_FILLED = "partial"  # Some fills received
-    FILLED = "filled"             # Fully executed
-    CANCELLED = "cancelled"       # User cancelled
-    REJECTED = "rejected"         # Exchange rejected
-    EXPIRED = "expired"           # Time-in-force expired
-    FAILED = "failed"             # Submission failed
+    FILLED = "filled"  # Fully executed
+    CANCELLED = "cancelled"  # User cancelled
+    REJECTED = "rejected"  # Exchange rejected
+    EXPIRED = "expired"  # Time-in-force expired
+    FAILED = "failed"  # Submission failed
 
 
 class OrderSide(str, Enum):
     """Order side."""
+
     BUY = "BUY"
     SELL = "SELL"
 
 
 class OrderType(str, Enum):
     """Order types."""
+
     LIMIT = "LIMIT"
     MARKET = "MARKET"
-    IOC = "IOC"          # Immediate or Cancel
-    FOK = "FOK"          # Fill or Kill
-    GTC = "GTC"          # Good Till Cancelled
+    IOC = "IOC"  # Immediate or Cancel
+    FOK = "FOK"  # Fill or Kill
+    GTC = "GTC"  # Good Till Cancelled
 
 
 class Fill(BaseModel):
     """Represents a single fill (partial execution)."""
+
     fill_id: str
     order_id: str
     size: float
@@ -75,17 +77,20 @@ class ManagedOrder(BaseModel):
     """
     Extended order model with full lifecycle tracking.
     """
+
     # Core order fields
     order_id: Optional[str] = None
-    client_order_id: str = Field(default_factory=lambda: f"pp_{int(datetime.now().timestamp() * 1000)}")
+    client_order_id: str = Field(
+        default_factory=lambda: f"pp_{int(datetime.now().timestamp() * 1000)}"
+    )
     market_id: str
     outcome: str
     side: OrderSide
     order_type: OrderType = OrderType.LIMIT
 
     # Sizing
-    size: float              # Original order size
-    price: float             # Limit price (0-1 for prediction markets)
+    size: float  # Original order size
+    price: float  # Limit price (0-1 for prediction markets)
     filled_size: float = 0.0
     remaining_size: float = 0.0
     avg_fill_price: float = 0.0
@@ -485,7 +490,7 @@ class OrderManager:
                     response = await self.client.place_order(
                         ticker=market_id,
                         side=outcome.lower(),  # yes/no
-                        action=side.lower(),   # buy/sell
+                        action=side.lower(),  # buy/sell
                         count=int(size),
                         price=price_cents,
                     )
@@ -583,8 +588,7 @@ class OrderManager:
             if order.is_active:
                 try:
                     await self.cancel_order(
-                        order.order_id or order.client_order_id,
-                        reason="Bulk cancel"
+                        order.order_id or order.client_order_id, reason="Bulk cancel"
                     )
                     cancelled += 1
                 except Exception as e:
@@ -749,13 +753,13 @@ class OrderManager:
                 # Fetch order status from exchange
                 if self.platform == "polymarket":
                     # Use the CLOB API to get order status
-                    if hasattr(self.client, 'get_order'):
+                    if hasattr(self.client, "get_order"):
                         status = await self.client.get_order(order.order_id)
                         if status:
                             await self._update_from_exchange(order, status)
                             results["updated"] += 1
                 elif self.platform == "kalshi":
-                    if hasattr(self.client, 'get_order'):
+                    if hasattr(self.client, "get_order"):
                         status = await self.client.get_order(order.order_id)
                         if status:
                             await self._update_from_exchange(order, status)

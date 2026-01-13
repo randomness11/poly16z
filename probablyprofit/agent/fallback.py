@@ -5,12 +5,13 @@ Wraps multiple AI agents and automatically falls back to the next
 if one fails. Ensures your bot keeps running even when APIs go down.
 """
 
-from typing import Any, List, Optional, Dict, Callable, Type
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from typing import Any, Callable, Dict, List, Optional, Type
+
 from loguru import logger
 
-from probablyprofit.agent.base import BaseAgent, Observation, Decision
+from probablyprofit.agent.base import BaseAgent, Decision, Observation
 from probablyprofit.api.client import PolymarketClient
 from probablyprofit.api.exceptions import AgentException
 from probablyprofit.risk.manager import RiskManager
@@ -150,8 +151,7 @@ class FallbackAgent(BaseAgent):
 
         # Initialize health tracking for each agent
         self.agent_health: Dict[str, AgentHealth] = {
-            agent.name: AgentHealth(name=agent.name)
-            for agent in agents
+            agent.name: AgentHealth(name=agent.name) for agent in agents
         }
 
         # Track which agent made the last decision
@@ -162,9 +162,7 @@ class FallbackAgent(BaseAgent):
         self.total_decisions = 0
 
         agent_names = [a.name for a in agents]
-        logger.info(
-            f"[FallbackAgent] Initialized with {len(agents)} agents: {agent_names}"
-        )
+        logger.info(f"[FallbackAgent] Initialized with {len(agents)} agents: {agent_names}")
 
     def _get_available_agents(self) -> List[BaseAgent]:
         """Get list of agents that are currently available (healthy or cooldown expired)."""
@@ -256,9 +254,7 @@ class FallbackAgent(BaseAgent):
                 errors.append((agent.name, error_msg))
                 health.record_failure()
 
-                logger.warning(
-                    f"[FallbackAgent] '{agent.name}' failed: {error_msg}"
-                )
+                logger.warning(f"[FallbackAgent] '{agent.name}' failed: {error_msg}")
 
                 # Continue to next agent
                 continue
@@ -275,7 +271,7 @@ class FallbackAgent(BaseAgent):
             metadata={
                 "all_agents_failed": True,
                 "errors": dict(errors),
-            }
+            },
         )
 
     def get_stats(self) -> Dict[str, Any]:
@@ -293,7 +289,7 @@ class FallbackAgent(BaseAgent):
                     "cooldown_until": str(health.cooldown_until) if health.cooldown_until else None,
                 }
                 for name, health in self.agent_health.items()
-            }
+            },
         }
 
     def reset_health(self, agent_name: Optional[str] = None) -> None:
@@ -354,14 +350,17 @@ def create_fallback_agent(
     if openai_key:
         try:
             from probablyprofit.agent.openai_agent import OpenAIAgent
-            agents.append(OpenAIAgent(
-                client=client,
-                risk_manager=risk_manager,
-                openai_api_key=openai_key,
-                strategy_prompt=strategy_prompt,
-                name="OpenAI-GPT4o",
-                dry_run=dry_run,
-            ))
+
+            agents.append(
+                OpenAIAgent(
+                    client=client,
+                    risk_manager=risk_manager,
+                    openai_api_key=openai_key,
+                    strategy_prompt=strategy_prompt,
+                    name="OpenAI-GPT4o",
+                    dry_run=dry_run,
+                )
+            )
             logger.info("[FallbackAgent] Added OpenAI agent to fallback chain")
         except Exception as e:
             logger.warning(f"[FallbackAgent] Could not create OpenAI agent: {e}")
@@ -369,14 +368,17 @@ def create_fallback_agent(
     if anthropic_key:
         try:
             from probablyprofit.agent.anthropic_agent import AnthropicAgent
-            agents.append(AnthropicAgent(
-                client=client,
-                risk_manager=risk_manager,
-                anthropic_api_key=anthropic_key,
-                strategy_prompt=strategy_prompt,
-                name="Anthropic-Claude",
-                dry_run=dry_run,
-            ))
+
+            agents.append(
+                AnthropicAgent(
+                    client=client,
+                    risk_manager=risk_manager,
+                    anthropic_api_key=anthropic_key,
+                    strategy_prompt=strategy_prompt,
+                    name="Anthropic-Claude",
+                    dry_run=dry_run,
+                )
+            )
             logger.info("[FallbackAgent] Added Anthropic agent to fallback chain")
         except Exception as e:
             logger.warning(f"[FallbackAgent] Could not create Anthropic agent: {e}")
@@ -384,22 +386,23 @@ def create_fallback_agent(
     if google_key:
         try:
             from probablyprofit.agent.gemini_agent import GeminiAgent
-            agents.append(GeminiAgent(
-                client=client,
-                risk_manager=risk_manager,
-                google_api_key=google_key,
-                strategy_prompt=strategy_prompt,
-                name="Google-Gemini",
-                dry_run=dry_run,
-            ))
+
+            agents.append(
+                GeminiAgent(
+                    client=client,
+                    risk_manager=risk_manager,
+                    google_api_key=google_key,
+                    strategy_prompt=strategy_prompt,
+                    name="Google-Gemini",
+                    dry_run=dry_run,
+                )
+            )
             logger.info("[FallbackAgent] Added Gemini agent to fallback chain")
         except Exception as e:
             logger.warning(f"[FallbackAgent] Could not create Gemini agent: {e}")
 
     if not agents:
-        raise ValueError(
-            "No agents could be created. Provide at least one valid API key."
-        )
+        raise ValueError("No agents could be created. Provide at least one valid API key.")
 
     return FallbackAgent(
         client=client,

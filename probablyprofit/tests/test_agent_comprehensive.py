@@ -1,14 +1,17 @@
 """
 Comprehensive tests for the Agent framework.
 """
-import pytest
+
 import asyncio
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from probablyprofit.agent.base import BaseAgent, Observation, Decision, AgentMemory
+import pytest
+
+from probablyprofit.agent.base import (AgentMemory, BaseAgent, Decision,
+                                       Observation)
+from probablyprofit.api.client import Market, Order, Position
 from probablyprofit.risk.manager import RiskManager
-from probablyprofit.api.client import Market, Position, Order
 
 
 class TestObservation:
@@ -62,7 +65,7 @@ class TestDecision:
             outcome="Yes",
             size=50.0,
             price=0.5,
-            metadata={"strategy": "momentum", "signal_strength": 0.9}
+            metadata={"strategy": "momentum", "signal_strength": 0.9},
         )
         assert decision.metadata["strategy"] == "momentum"
 
@@ -110,16 +113,20 @@ class TestAgentMemory:
         memory = AgentMemory()
         # Add some observations and decisions synchronously for history
         for i in range(5):
-            memory.observations.append(Observation(
-                timestamp=datetime.now(),
-                markets=[],
-                positions=[],
-                balance=100.0,
-            ))
-            memory.decisions.append(Decision(
-                action="hold",
-                reasoning=f"Reason {i}",
-            ))
+            memory.observations.append(
+                Observation(
+                    timestamp=datetime.now(),
+                    markets=[],
+                    positions=[],
+                    balance=100.0,
+                )
+            )
+            memory.decisions.append(
+                Decision(
+                    action="hold",
+                    reasoning=f"Reason {i}",
+                )
+            )
 
         history = memory.get_recent_history(n=3)
         assert "Reason 2" in history or "Reason 3" in history or "Reason 4" in history

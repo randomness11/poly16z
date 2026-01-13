@@ -1,20 +1,22 @@
 """
 Pytest configuration and shared fixtures.
 """
-import pytest
+
 import asyncio
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
 from typing import List
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from probablyprofit.api.client import PolymarketClient, Market, Order, Position
-from probablyprofit.risk.manager import RiskManager, RiskLimits
-from probablyprofit.agent.base import BaseAgent, Observation, Decision
+import pytest
 
+from probablyprofit.agent.base import BaseAgent, Decision, Observation
+from probablyprofit.api.client import Market, Order, PolymarketClient, Position
+from probablyprofit.risk.manager import RiskLimits, RiskManager
 
 # =============================================================================
 # ASYNC FIXTURES
 # =============================================================================
+
 
 @pytest.fixture(scope="session")
 def event_loop():
@@ -27,6 +29,7 @@ def event_loop():
 # =============================================================================
 # MOCK DATA FACTORIES
 # =============================================================================
+
 
 def create_mock_market(
     condition_id: str = "0x123abc",
@@ -47,9 +50,7 @@ def create_mock_market(
         volume=volume,
         liquidity=liquidity,
         active=True,
-        metadata={
-            "clobTokenIds": ["token_yes_123", "token_no_456"]
-        }
+        metadata={"clobTokenIds": ["token_yes_123", "token_no_456"]},
     )
 
 
@@ -67,7 +68,7 @@ def create_mock_position(
         size=size,
         avg_price=avg_price,
         current_price=current_price,
-        pnl=size * (current_price - avg_price)
+        pnl=size * (current_price - avg_price),
     )
 
 
@@ -90,13 +91,14 @@ def create_mock_order(
         price=price,
         status=status,
         filled_size=size if status == "filled" else 0.0,
-        timestamp=datetime.now()
+        timestamp=datetime.now(),
     )
 
 
 # =============================================================================
 # CLIENT FIXTURES
 # =============================================================================
+
 
 @pytest.fixture
 def mock_client() -> AsyncMock:
@@ -132,6 +134,7 @@ def mock_client_with_positions(mock_client: AsyncMock) -> AsyncMock:
 # =============================================================================
 # RISK MANAGER FIXTURES
 # =============================================================================
+
 
 @pytest.fixture
 def risk_manager() -> RiskManager:
@@ -169,6 +172,7 @@ def aggressive_risk_manager() -> RiskManager:
 # OBSERVATION FIXTURES
 # =============================================================================
 
+
 @pytest.fixture
 def sample_observation(mock_client: AsyncMock) -> Observation:
     """Create a sample Observation."""
@@ -204,15 +208,14 @@ def observation_with_positions() -> Observation:
 # AGENT FIXTURES
 # =============================================================================
 
+
 class MockAgent(BaseAgent):
     """Concrete implementation of BaseAgent for testing."""
 
     def __init__(self, *args, decision_to_return: Decision = None, **kwargs):
         super().__init__(*args, **kwargs)
         self.decision_to_return = decision_to_return or Decision(
-            action="hold",
-            reasoning="Test hold decision",
-            confidence=0.5
+            action="hold", reasoning="Test hold decision", confidence=0.5
         )
 
     async def decide(self, observation: Observation) -> Decision:
@@ -236,10 +239,12 @@ def mock_agent(mock_client: AsyncMock, risk_manager: RiskManager) -> MockAgent:
 # API EXCEPTION FIXTURES
 # =============================================================================
 
+
 @pytest.fixture
 def rate_limit_error():
     """Create a rate limit exception."""
     from probablyprofit.api.exceptions import RateLimitException
+
     return RateLimitException("Rate limit exceeded: 429")
 
 
@@ -247,4 +252,5 @@ def rate_limit_error():
 def network_error():
     """Create a network exception."""
     from probablyprofit.api.exceptions import NetworkException
+
     return NetworkException("Connection timeout")

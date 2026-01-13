@@ -1,6 +1,9 @@
-import pytest
 import os
+
+import pytest
+
 from probablyprofit.api.client import PolymarketClient
+
 
 @pytest.mark.asyncio
 async def test_get_balance_no_creds():
@@ -9,6 +12,7 @@ async def test_get_balance_no_creds():
     balance = await client.get_balance()
     assert balance == 0.0
     await client.close()
+
 
 @pytest.mark.asyncio
 async def test_get_positions_no_creds():

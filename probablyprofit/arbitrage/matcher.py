@@ -6,9 +6,10 @@ using text similarity and keyword extraction.
 """
 
 import re
-from typing import List, Optional, Tuple, Dict, Any
 from dataclasses import dataclass
 from difflib import SequenceMatcher
+from typing import Any, Dict, List, Optional, Tuple
+
 from loguru import logger
 
 
@@ -137,9 +138,7 @@ class MarketMatcher:
                 kl_ticker = getattr(kl, "ticker", str(kl))
 
                 # Calculate similarity
-                score, matched_keywords = self._calculate_similarity(
-                    pm_question, kl_question
-                )
+                score, matched_keywords = self._calculate_similarity(pm_question, kl_question)
 
                 if score > best_score and score >= self.min_similarity:
                     best_score = score
@@ -214,9 +213,7 @@ class MarketMatcher:
         text_score = SequenceMatcher(None, norm1, norm2).ratio()
 
         # Weighted combination
-        final_score = (
-            self.keyword_weight * keyword_score + self.text_weight * text_score
-        )
+        final_score = self.keyword_weight * keyword_score + self.text_weight * text_score
 
         all_matched = matched_keywords + matched_dates + matched_entities
         return final_score, all_matched
@@ -243,15 +240,78 @@ class MarketMatcher:
         """Extract important keywords from text."""
         # Common stopwords to ignore
         stopwords = {
-            "the", "a", "an", "and", "or", "but", "in", "on", "at", "to",
-            "for", "of", "with", "by", "will", "be", "is", "are", "was",
-            "were", "been", "being", "have", "has", "had", "do", "does",
-            "did", "this", "that", "these", "those", "what", "which",
-            "who", "whom", "when", "where", "why", "how", "all", "each",
-            "every", "both", "few", "more", "most", "other", "some", "such",
-            "no", "nor", "not", "only", "own", "same", "so", "than", "too",
-            "very", "just", "over", "under", "before", "after", "above",
-            "below", "between", "into", "through", "during", "until",
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "but",
+            "in",
+            "on",
+            "at",
+            "to",
+            "for",
+            "of",
+            "with",
+            "by",
+            "will",
+            "be",
+            "is",
+            "are",
+            "was",
+            "were",
+            "been",
+            "being",
+            "have",
+            "has",
+            "had",
+            "do",
+            "does",
+            "did",
+            "this",
+            "that",
+            "these",
+            "those",
+            "what",
+            "which",
+            "who",
+            "whom",
+            "when",
+            "where",
+            "why",
+            "how",
+            "all",
+            "each",
+            "every",
+            "both",
+            "few",
+            "more",
+            "most",
+            "other",
+            "some",
+            "such",
+            "no",
+            "nor",
+            "not",
+            "only",
+            "own",
+            "same",
+            "so",
+            "than",
+            "too",
+            "very",
+            "just",
+            "over",
+            "under",
+            "before",
+            "after",
+            "above",
+            "below",
+            "between",
+            "into",
+            "through",
+            "during",
+            "until",
         }
 
         words = text.split()

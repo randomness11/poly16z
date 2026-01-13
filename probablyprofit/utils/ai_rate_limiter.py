@@ -8,12 +8,12 @@ Rate limiters specifically configured for AI API providers
 import asyncio
 import time
 from dataclasses import dataclass
-from typing import Dict, Optional, Callable, Any, TypeVar
 from functools import wraps
+from typing import Any, Callable, Dict, Optional, TypeVar
+
 from loguru import logger
 
 from probablyprofit.utils.resilience import RateLimiter, retry
-
 
 T = TypeVar("T")
 
@@ -21,6 +21,7 @@ T = TypeVar("T")
 @dataclass
 class AIProviderLimits:
     """Rate limit configuration for an AI provider."""
+
     requests_per_minute: int
     tokens_per_minute: int
     requests_per_day: Optional[int] = None
@@ -86,8 +87,7 @@ class AIRateLimiter:
 
         # Get default limits
         defaults = AI_PROVIDER_LIMITS.get(
-            provider.lower(),
-            AIProviderLimits(requests_per_minute=30, tokens_per_minute=10000)
+            provider.lower(), AIProviderLimits(requests_per_minute=30, tokens_per_minute=10000)
         )
 
         self.requests_per_minute = requests_per_minute or defaults.requests_per_minute
@@ -138,7 +138,9 @@ class AIRateLimiter:
         # Check if in backoff period
         if self._backoff_until and time.time() < self._backoff_until:
             wait_time = self._backoff_until - time.time()
-            logger.warning(f"[AIRateLimiter] '{self.provider}' in backoff, waiting {wait_time:.1f}s")
+            logger.warning(
+                f"[AIRateLimiter] '{self.provider}' in backoff, waiting {wait_time:.1f}s"
+            )
             await asyncio.sleep(wait_time)
             total_wait += wait_time
 
@@ -202,7 +204,7 @@ class AIRateLimiter:
             backoff = retry_after
         else:
             # Exponential backoff: 5s, 10s, 20s, 40s, max 60s
-            backoff = min(5.0 * (2 ** self._consecutive_429s), 60.0)
+            backoff = min(5.0 * (2**self._consecutive_429s), 60.0)
 
         self._backoff_until = time.time() + backoff
 
@@ -241,6 +243,7 @@ class AIRateLimiter:
             async def call_api():
                 ...
         """
+
         def decorator(func: Callable[..., T]) -> Callable[..., T]:
             @wraps(func)
             async def wrapper(*args, **kwargs) -> T:
@@ -266,6 +269,7 @@ class AIRateLimiter:
                     raise
 
             return wrapper
+
         return decorator
 
     @classmethod
@@ -284,6 +288,7 @@ class AIRateLimiter:
 # =============================================================================
 # CONVENIENCE DECORATORS
 # =============================================================================
+
 
 def openai_rate_limited(estimated_tokens: int = 1000):
     """Decorator for OpenAI API calls."""
@@ -320,6 +325,7 @@ def ai_rate_limited(provider: str, estimated_tokens: int = 1000):
 # COMBINED RETRY + RATE LIMIT
 # =============================================================================
 
+
 def ai_resilient(
     provider: str,
     estimated_tokens: int = 1000,
@@ -337,6 +343,7 @@ def ai_resilient(
         async def call_claude():
             ...
     """
+
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         # Apply rate limiting first
         rate_limited_func = ai_rate_limited(provider, estimated_tokens)(func)
@@ -348,12 +355,10 @@ def ai_resilient(
             return await rate_limited_func(*args, **kwargs)
 
         return wrapper
+
     return decorator
 
 
 def get_all_ai_limiter_stats() -> Dict[str, Dict[str, Any]]:
     """Get statistics for all AI rate limiters."""
-    return {
-        name: limiter.stats
-        for name, limiter in AIRateLimiter._limiters.items()
-    }
+    return {name: limiter.stats for name, limiter in AIRateLimiter._limiters.items()}

@@ -1,91 +1,161 @@
+import argparse
 import asyncio
 import os
-import argparse
 import sys
+
 from dotenv import load_dotenv
 from loguru import logger
-
 
 # Add parent directory to path to allow importing this folder as 'probablyprofit' package
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
-from probablyprofit.api.client import PolymarketClient
-from probablyprofit.risk.manager import RiskManager
-from probablyprofit.agent.openai_agent import OpenAIAgent
-from probablyprofit.agent.gemini_agent import GeminiAgent
 from probablyprofit.agent.anthropic_agent import AnthropicAgent
 from probablyprofit.agent.ensemble import EnsembleAgent, VotingStrategy
 from probablyprofit.agent.fallback import FallbackAgent, create_fallback_agent
-from probablyprofit.agent.strategy import (
-    MeanReversionStrategy,
-    NewsTradingStrategy,
-    CustomStrategy,
-    MomentumStrategy,
-    ValueStrategy,
-    ContrarianStrategy,
-    VolatilityStrategy,
-    CalendarStrategy,
-    ArbitrageStrategy,
-)
+from probablyprofit.agent.gemini_agent import GeminiAgent
+from probablyprofit.agent.openai_agent import OpenAIAgent
+from probablyprofit.agent.strategy import (ArbitrageStrategy, CalendarStrategy,
+                                           ContrarianStrategy, CustomStrategy,
+                                           MeanReversionStrategy,
+                                           MomentumStrategy,
+                                           NewsTradingStrategy, ValueStrategy,
+                                           VolatilityStrategy)
+from probablyprofit.api.client import PolymarketClient
+from probablyprofit.risk.manager import RiskManager
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="ProbablyProfit: AI Trading Bot for Polymarket & Kalshi")
+    parser = argparse.ArgumentParser(
+        description="ProbablyProfit: AI Trading Bot for Polymarket & Kalshi"
+    )
 
     # Platform selection
-    parser.add_argument("--platform", type=str, choices=["polymarket", "kalshi"], default="polymarket",
-                        help="Prediction market platform to use (default: polymarket)")
+    parser.add_argument(
+        "--platform",
+        type=str,
+        choices=["polymarket", "kalshi"],
+        default="polymarket",
+        help="Prediction market platform to use (default: polymarket)",
+    )
 
-    parser.add_argument("--strategy", type=str,
-                        choices=["mean-reversion", "news", "custom", "momentum", "value", "contrarian", "volatility", "calendar", "arbitrage"],
-                        default="mean-reversion",
-                        help="Trading strategy to employ")
-    parser.add_argument("--keywords", type=str, default="",
-                        help="Comma-separated keywords for News/Custom strategy")
-    parser.add_argument("--prompt-file", type=str, default="strategy.txt",
-                        help="Path to custom strategy prompt file (for --strategy custom)")
-    parser.add_argument("--agent", type=str, choices=["openai", "gemini", "anthropic", "ensemble", "fallback"], default="openai",
-                        help="AI provider to use ('ensemble' for consensus, 'fallback' for auto-failover)")
-    parser.add_argument("--model", type=str, default="",
-                        help="Specific model name (e.g. 'gpt-4o', 'o1-preview', 'gemini-1.5-pro')")
-    parser.add_argument("--interval", type=int, default=60,
-                        help="Loop interval in seconds")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Run without placing real trades (simulation mode)")
-    parser.add_argument("--paper", action="store_true",
-                        help="Paper trading mode - simulates trades with virtual money")
-    parser.add_argument("--paper-capital", type=float, default=10000.0,
-                        help="Initial capital for paper trading (default: 10000)")
-    
+    parser.add_argument(
+        "--strategy",
+        type=str,
+        choices=[
+            "mean-reversion",
+            "news",
+            "custom",
+            "momentum",
+            "value",
+            "contrarian",
+            "volatility",
+            "calendar",
+            "arbitrage",
+        ],
+        default="mean-reversion",
+        help="Trading strategy to employ",
+    )
+    parser.add_argument(
+        "--keywords", type=str, default="", help="Comma-separated keywords for News/Custom strategy"
+    )
+    parser.add_argument(
+        "--prompt-file",
+        type=str,
+        default="strategy.txt",
+        help="Path to custom strategy prompt file (for --strategy custom)",
+    )
+    parser.add_argument(
+        "--agent",
+        type=str,
+        choices=["openai", "gemini", "anthropic", "ensemble", "fallback"],
+        default="openai",
+        help="AI provider to use ('ensemble' for consensus, 'fallback' for auto-failover)",
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="",
+        help="Specific model name (e.g. 'gpt-4o', 'o1-preview', 'gemini-1.5-pro')",
+    )
+    parser.add_argument("--interval", type=int, default=60, help="Loop interval in seconds")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Run without placing real trades (simulation mode)"
+    )
+    parser.add_argument(
+        "--paper",
+        action="store_true",
+        help="Paper trading mode - simulates trades with virtual money",
+    )
+    parser.add_argument(
+        "--paper-capital",
+        type=float,
+        default=10000.0,
+        help="Initial capital for paper trading (default: 10000)",
+    )
+
     # Intelligence Layer arguments
-    parser.add_argument("--news", action="store_true",
-                        help="Enable news context via Perplexity API (requires PERPLEXITY_API_KEY)")
-    parser.add_argument("--alpha", action="store_true",
-                        help="Enable multi-source alpha signals (Twitter, Reddit, Google Trends, News)")
-    parser.add_argument("--top-markets", type=int, default=3,
-                        help="Number of top markets to fetch intel for (default: 3)")
+    parser.add_argument(
+        "--news",
+        action="store_true",
+        help="Enable news context via Perplexity API (requires PERPLEXITY_API_KEY)",
+    )
+    parser.add_argument(
+        "--alpha",
+        action="store_true",
+        help="Enable multi-source alpha signals (Twitter, Reddit, Google Trends, News)",
+    )
+    parser.add_argument(
+        "--top-markets",
+        type=int,
+        default=3,
+        help="Number of top markets to fetch intel for (default: 3)",
+    )
 
     # Risk Management arguments
-    parser.add_argument("--sizing", type=str, choices=["manual", "fixed_pct", "kelly", "confidence_based", "dynamic"],
-                        default="manual", help="Position sizing method (default: manual)")
-    parser.add_argument("--kelly-fraction", type=float, default=0.25,
-                        help="Kelly fraction multiplier (default: 0.25)")
+    parser.add_argument(
+        "--sizing",
+        type=str,
+        choices=["manual", "fixed_pct", "kelly", "confidence_based", "dynamic"],
+        default="manual",
+        help="Position sizing method (default: manual)",
+    )
+    parser.add_argument(
+        "--kelly-fraction",
+        type=float,
+        default=0.25,
+        help="Kelly fraction multiplier (default: 0.25)",
+    )
 
     # Backtesting arguments
-    parser.add_argument("--backtest", action="store_true",
-                        help="Run backtest simulation with synthetic data")
-    parser.add_argument("--backtest-days", type=int, default=30,
-                        help="Duration of backtest in days")
-    
+    parser.add_argument(
+        "--backtest", action="store_true", help="Run backtest simulation with synthetic data"
+    )
+    parser.add_argument(
+        "--backtest-days", type=int, default=30, help="Duration of backtest in days"
+    )
+
     # Ensemble-specific arguments
-    parser.add_argument("--ensemble-agents", type=str, default="openai,gemini,anthropic",
-                        help="Comma-separated list of agents for ensemble mode")
-    parser.add_argument("--voting", type=str, choices=["majority", "weighted", "unanimous", "highest"],
-                        default="majority", help="Voting strategy for ensemble mode")
-    parser.add_argument("--min-agreement", type=int, default=2,
-                        help="Minimum agents that must agree for ensemble decisions")
-    
+    parser.add_argument(
+        "--ensemble-agents",
+        type=str,
+        default="openai,gemini,anthropic",
+        help="Comma-separated list of agents for ensemble mode",
+    )
+    parser.add_argument(
+        "--voting",
+        type=str,
+        choices=["majority", "weighted", "unanimous", "highest"],
+        default="majority",
+        help="Voting strategy for ensemble mode",
+    )
+    parser.add_argument(
+        "--min-agreement",
+        type=int,
+        default=2,
+        help="Minimum agents that must agree for ensemble decisions",
+    )
+
     return parser.parse_args()
 
 
@@ -98,37 +168,46 @@ def create_agent(
     args,
 ) -> "BaseAgent":
     """Create a single agent based on type."""
-    
+
     if agent_type == "openai":
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("Missing OPENAI_API_KEY in .env")
         model = args.model if args.model else "gpt-4o"
         return OpenAIAgent(
-            client, risk, api_key, strategy_prompt,
-            model=model, loop_interval=args.interval,
-            strategy=strategy, dry_run=args.dry_run
+            client,
+            risk,
+            api_key,
+            strategy_prompt,
+            model=model,
+            loop_interval=args.interval,
+            strategy=strategy,
+            dry_run=args.dry_run,
         )
-        
+
     elif agent_type == "gemini":
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError("Missing GOOGLE_API_KEY in .env")
         model = args.model if args.model else "gemini-1.5-pro"
         return GeminiAgent(
-            client, risk, api_key, strategy_prompt,
-            model=model, loop_interval=args.interval,
-            strategy=strategy, dry_run=args.dry_run
+            client,
+            risk,
+            api_key,
+            strategy_prompt,
+            model=model,
+            loop_interval=args.interval,
+            strategy=strategy,
+            dry_run=args.dry_run,
         )
-        
+
     elif agent_type == "anthropic":
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
             raise ValueError("Missing ANTHROPIC_API_KEY in .env")
         model = args.model if args.model else "claude-sonnet-4-5-20250929"
         return AnthropicAgent(
-            client, risk, api_key, strategy_prompt,
-            model=model, loop_interval=args.interval
+            client, risk, api_key, strategy_prompt, model=model, loop_interval=args.interval
         )
     else:
         raise ValueError(f"Unknown agent type: {agent_type}")
@@ -145,13 +224,16 @@ async def main():
     elif args.agent == "fallback":
         agent_label = "fallback (auto-failover)"
 
-    logger.info(f"🚀 Starting ProbablyProfit Bot [Platform: {args.platform}] [Strategy: {args.strategy}] [Agent: {agent_label}]")
+    logger.info(
+        f"🚀 Starting ProbablyProfit Bot [Platform: {args.platform}] [Strategy: {args.strategy}] [Agent: {agent_label}]"
+    )
 
     # 0.5 Initialize Database (if persistence enabled)
     enable_persistence = os.getenv("ENABLE_PERSISTENCE", "true").lower() == "true"
     if enable_persistence:
         try:
             from probablyprofit.storage.database import initialize_database
+
             await initialize_database()
             logger.info("✅ Database initialized")
         except Exception as e:
@@ -161,17 +243,17 @@ async def main():
     # 1. Initialize Platform Client
     if args.platform == "polymarket":
         from probablyprofit.api.client import PolymarketClient
-        client = PolymarketClient(
-            private_key=os.getenv("PRIVATE_KEY")
-        )
+
+        client = PolymarketClient(private_key=os.getenv("PRIVATE_KEY"))
         logger.info("📊 Connected to Polymarket")
 
     elif args.platform == "kalshi":
         from probablyprofit.api.kalshi_client import KalshiClient
+
         client = KalshiClient(
             api_key_id=os.getenv("KALSHI_API_KEY_ID"),
             private_key_path=os.getenv("KALSHI_PRIVATE_KEY_PATH"),
-            demo=os.getenv("KALSHI_DEMO", "false").lower() == "true"
+            demo=os.getenv("KALSHI_DEMO", "false").lower() == "true",
         )
         logger.info("📊 Connected to Kalshi")
 
@@ -181,7 +263,7 @@ async def main():
 
     # 2. Risk Manager
     risk = RiskManager(initial_capital=float(os.getenv("INITIAL_CAPITAL", 1000.0)))
-    
+
     # 3. Strategy Setup
     strategy = None
     if args.strategy == "mean-reversion":
@@ -300,10 +382,11 @@ async def main():
             logger.error(f"❌ {e}")
             await client.close()
             return
-    
+
     # 4b. Wrap with Intelligence if enabled
     if (args.news or args.alpha) and agent:
         from probablyprofit.agent.intelligence import wrap_with_intelligence
+
         agent = wrap_with_intelligence(
             agent,
             enable_news=args.news,
@@ -312,7 +395,7 @@ async def main():
         )
         if args.alpha:
             logger.info(f"🎯 Multi-source alpha enabled for top {args.top_markets} markets")
-        elif hasattr(agent, 'perplexity') and agent.perplexity:
+        elif hasattr(agent, "perplexity") and agent.perplexity:
             logger.info(f"📰 News intelligence enabled for top {args.top_markets} markets")
 
     # 4c. Apply Risk Settings
@@ -320,7 +403,9 @@ async def main():
         agent.sizing_method = args.sizing
         agent.kelly_fraction = args.kelly_fraction
         if args.sizing != "manual":
-            logger.info(f"⚖️  Auto-sizing enabled: {args.sizing} (Kelly fraction: {args.kelly_fraction})")
+            logger.info(
+                f"⚖️  Auto-sizing enabled: {args.sizing} (Kelly fraction: {args.kelly_fraction})"
+            )
 
     # 4d. Setup Paper Trading if enabled
     paper_engine = None
@@ -345,33 +430,32 @@ async def main():
                 logger.error("❌ No agent initialized for backtest")
                 return
 
-            from probablyprofit.backtesting.engine import BacktestEngine
             from probablyprofit.backtesting.data import MockDataGenerator
-            
+            from probablyprofit.backtesting.engine import BacktestEngine
+
             logger.info(f"🔙 Starting Backtest Mode ({args.backtest_days} days)")
-            
+
             # Generate synthetic data
             generator = MockDataGenerator()
             markets, timestamps = generator.generate_market_scenario(
-                num_markets=5,
-                days=args.backtest_days
+                num_markets=5, days=args.backtest_days
             )
-            
+
             # Run simulation
             engine = BacktestEngine(initial_capital=risk.initial_capital)
             result = await engine.run_backtest(agent, markets, timestamps)
-            
+
             # Print Summary
-            print("\n" + "="*50)
+            print("\n" + "=" * 50)
             print(f"📊 BACKTEST RESULTS ({result.start_time.date()} to {result.end_time.date()})")
-            print("="*50)
+            print("=" * 50)
             print(f"Return:         {result.total_return_pct:+.2%} (${result.total_return:+.2f})")
             print(f"Sharpe Ratio:   {result.sharpe_ratio:.2f}")
             print(f"Max Drawdown:   {result.max_drawdown:.2%}")
             print(f"Win Rate:       {result.win_rate:.1%}")
             print(f"Total Trades:   {result.total_trades}")
-            print("="*50 + "\n")
-            
+            print("=" * 50 + "\n")
+
         elif agent:
             # Check if web dashboard is enabled
             enable_web = os.getenv("ENABLE_WEB_DASHBOARD", "false").lower() == "true"

@@ -4,20 +4,17 @@ Data Repositories
 Repository pattern for data access layer - handles all database queries.
 """
 
-from sqlmodel import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional
 from datetime import datetime, timedelta
-from loguru import logger
+from typing import List, Optional
 
-from probablyprofit.storage.models import (
-    TradeRecord,
-    ObservationRecord,
-    DecisionRecord,
-    PositionSnapshot,
-    BalanceSnapshot,
-    PerformanceMetric,
-)
+from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
+
+from probablyprofit.storage.models import (BalanceSnapshot, DecisionRecord,
+                                           ObservationRecord,
+                                           PerformanceMetric, PositionSnapshot,
+                                           TradeRecord)
 
 
 class TradeRepository:
@@ -63,18 +60,14 @@ class TradeRepository:
         return trade
 
     @staticmethod
-    async def get_recent(
-        session: AsyncSession, limit: int = 100
-    ) -> List[TradeRecord]:
+    async def get_recent(session: AsyncSession, limit: int = 100) -> List[TradeRecord]:
         """Get recent trades."""
         stmt = select(TradeRecord).order_by(TradeRecord.timestamp.desc()).limit(limit)
         result = await session.execute(stmt)
         return list(result.scalars().all())
 
     @staticmethod
-    async def get_by_market(
-        session: AsyncSession, market_id: str
-    ) -> List[TradeRecord]:
+    async def get_by_market(session: AsyncSession, market_id: str) -> List[TradeRecord]:
         """Get trades for a specific market."""
         stmt = select(TradeRecord).where(TradeRecord.market_id == market_id)
         result = await session.execute(stmt)
@@ -132,15 +125,9 @@ class ObservationRepository:
         return obs_record
 
     @staticmethod
-    async def get_recent(
-        session: AsyncSession, limit: int = 100
-    ) -> List[ObservationRecord]:
+    async def get_recent(session: AsyncSession, limit: int = 100) -> List[ObservationRecord]:
         """Get recent observations."""
-        stmt = (
-            select(ObservationRecord)
-            .order_by(ObservationRecord.timestamp.desc())
-            .limit(limit)
-        )
+        stmt = select(ObservationRecord).order_by(ObservationRecord.timestamp.desc()).limit(limit)
         result = await session.execute(stmt)
         return list(result.scalars().all())
 
@@ -186,15 +173,9 @@ class DecisionRepository:
         return dec_record
 
     @staticmethod
-    async def get_recent(
-        session: AsyncSession, limit: int = 100
-    ) -> List[DecisionRecord]:
+    async def get_recent(session: AsyncSession, limit: int = 100) -> List[DecisionRecord]:
         """Get recent decisions."""
-        stmt = (
-            select(DecisionRecord)
-            .order_by(DecisionRecord.timestamp.desc())
-            .limit(limit)
-        )
+        stmt = select(DecisionRecord).order_by(DecisionRecord.timestamp.desc()).limit(limit)
         result = await session.execute(stmt)
         return list(result.scalars().all())
 
@@ -228,9 +209,7 @@ class PerformanceRepository:
         return snapshot
 
     @staticmethod
-    async def get_equity_curve(
-        session: AsyncSession, days: int = 30
-    ) -> List[BalanceSnapshot]:
+    async def get_equity_curve(session: AsyncSession, days: int = 30) -> List[BalanceSnapshot]:
         """Get equity curve for last N days."""
         cutoff = datetime.now() - timedelta(days=days)
         stmt = (
