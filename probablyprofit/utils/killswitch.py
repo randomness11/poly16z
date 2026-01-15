@@ -16,7 +16,6 @@ from typing import Any, Callable, List, Optional
 
 from loguru import logger
 
-
 # Default kill switch file location
 KILL_SWITCH_FILE = Path("/tmp/probablyprofit.stop")
 KILL_SWITCH_REASON_FILE = Path("/tmp/probablyprofit.stop.reason")

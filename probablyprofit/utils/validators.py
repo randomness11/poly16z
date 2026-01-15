@@ -14,7 +14,6 @@ from loguru import logger
 
 from probablyprofit.api.exceptions import ValidationException
 
-
 # Patterns that may indicate prompt injection attempts
 SUSPICIOUS_PATTERNS = [
     # System prompt manipulation

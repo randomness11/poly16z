@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Optional, Pattern
 
 from loguru import logger
 
-
 # Patterns that look like secrets (compiled for performance)
 SECRET_PATTERNS: List[Pattern] = [
     # API keys (common formats)

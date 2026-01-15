@@ -15,11 +15,11 @@ from typing import TYPE_CHECKING, Any, Deque, Dict, List, Optional
 from loguru import logger
 from pydantic import BaseModel, ConfigDict
 
+from probablyprofit.alerts.telegram import get_alerter
 from probablyprofit.api.client import Market, Order, PolymarketClient, Position
 from probablyprofit.config import get_config
 from probablyprofit.risk.manager import RiskManager
-from probablyprofit.utils.killswitch import is_kill_switch_active, get_kill_switch, KillSwitchError
-from probablyprofit.alerts.telegram import get_alerter
+from probablyprofit.utils.killswitch import KillSwitchError, get_kill_switch, is_kill_switch_active
 
 if TYPE_CHECKING:
     from probablyprofit.agent.strategy import BaseStrategy

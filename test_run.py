@@ -15,8 +15,8 @@ load_dotenv()
 print("Loading modules...")
 sys.stdout.flush()
 
-from probablyprofit.api.client import PolymarketClient
 from probablyprofit.agent.openai_agent import OpenAIAgent
+from probablyprofit.api.client import PolymarketClient
 from probablyprofit.risk.manager import RiskManager
 
 STRATEGY = """

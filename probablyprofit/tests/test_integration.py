@@ -99,7 +99,7 @@ class TestRiskManagerDrawdown:
 
     def test_drawdown_calculation(self):
         """Test drawdown is calculated correctly."""
-        from probablyprofit.risk.manager import RiskManager, RiskLimits
+        from probablyprofit.risk.manager import RiskLimits, RiskManager
 
         rm = RiskManager(initial_capital=1000.0)
 
@@ -380,8 +380,9 @@ class TestTelegramAlerter:
 
     def test_message_formatting(self):
         """Test alert message formatting."""
-        from probablyprofit.alerts.telegram import Alert, AlertLevel, TelegramAlerter
         from datetime import datetime
+
+        from probablyprofit.alerts.telegram import Alert, AlertLevel, TelegramAlerter
 
         alerter = TelegramAlerter()
 
@@ -408,11 +409,12 @@ class TestFullTradeFlow:
     @pytest.mark.asyncio
     async def test_observe_decide_act_cycle(self):
         """Test full observe -> decide -> act cycle with mock."""
+        from datetime import datetime
         from unittest.mock import AsyncMock, MagicMock
+
         from probablyprofit.agent.base import Decision, Observation
         from probablyprofit.api.client import Market
         from probablyprofit.risk.manager import RiskManager
-        from datetime import datetime
 
         # Create mock client with all required methods
         mock_client = MagicMock()
@@ -468,11 +470,12 @@ class TestFullTradeFlow:
     @pytest.mark.asyncio
     async def test_buy_order_execution(self):
         """Test buy order execution through agent."""
+        from datetime import datetime
         from unittest.mock import AsyncMock, MagicMock
+
         from probablyprofit.agent.base import BaseAgent, Decision, Observation
         from probablyprofit.api.client import Market, Order
         from probablyprofit.risk.manager import RiskManager
-        from datetime import datetime
 
         mock_market = Market(
             condition_id="buy_test_market",
@@ -533,8 +536,9 @@ class TestCrashRecovery:
     @pytest.mark.asyncio
     async def test_risk_state_persistence(self):
         """Test that risk state can be saved and loaded."""
-        import tempfile
         import os
+        import tempfile
+
         from probablyprofit.risk.manager import RiskManager
 
         rm1 = RiskManager(initial_capital=1000.0)
@@ -587,7 +591,7 @@ class TestKillSwitchIntegration:
 
     def test_kill_switch_check_in_agent(self):
         """Test that kill switch check is properly imported in agent."""
-        from probablyprofit.agent.base import is_kill_switch_active, get_kill_switch
+        from probablyprofit.agent.base import get_kill_switch, is_kill_switch_active
         from probablyprofit.utils.killswitch import KillSwitch
 
         # Verify the imports exist and work
@@ -601,6 +605,7 @@ class TestKillSwitchIntegration:
     def test_kill_switch_stops_agent_flag(self):
         """Test that agent running flag can be set to False."""
         from unittest.mock import MagicMock
+
         from probablyprofit.agent.base import BaseAgent, Decision, Observation
         from probablyprofit.risk.manager import RiskManager
 
@@ -636,7 +641,8 @@ class TestAlertingIntegration:
     async def test_alerter_send_without_credentials(self):
         """Test that alerter gracefully handles missing credentials."""
         import os
-        from probablyprofit.alerts.telegram import TelegramAlerter, AlertLevel
+
+        from probablyprofit.alerts.telegram import AlertLevel, TelegramAlerter
 
         # Clear any existing env vars
         old_token = os.environ.pop("TELEGRAM_BOT_TOKEN", None)
@@ -659,8 +665,9 @@ class TestAlertingIntegration:
     @pytest.mark.asyncio
     async def test_trade_alert_formatting(self):
         """Test trade alert message formatting."""
-        from probablyprofit.alerts.telegram import TelegramAlerter, Alert, AlertLevel
         from datetime import datetime
+
+        from probablyprofit.alerts.telegram import Alert, AlertLevel, TelegramAlerter
 
         alerter = TelegramAlerter()
 

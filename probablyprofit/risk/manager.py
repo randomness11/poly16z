@@ -12,8 +12,8 @@ from typing import Dict, List, Optional
 from loguru import logger
 from pydantic import BaseModel
 
-from probablyprofit.config import get_config
 from probablyprofit.alerts.telegram import get_alerter
+from probablyprofit.config import get_config
 
 
 class RiskLimits(BaseModel):

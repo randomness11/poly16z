@@ -8,6 +8,7 @@ import asyncio
 import os
 
 from dotenv import load_dotenv
+
 from probablyprofit import AnthropicAgent, PolymarketClient, RiskManager
 from probablyprofit.data import NewsCollector
 from probablyprofit.utils import setup_logging
