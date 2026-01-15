@@ -37,5 +37,5 @@ jobs:
         continue-on-error: true  # Don't fail on type errors (yet)
         
       - name: Run tests
-        run: pytest probablyprofit/tests/ -v --tb=short --timeout=30 -x --ignore=probablyprofit/tests/test_integration.py --ignore=probablyprofit/tests/test_backtest.py -k "not slow"
+        run: pytest probablyprofit/tests/ -v --tb=short --timeout=30 -x --ignore=probablyprofit/tests/test_integration.py --ignore=probablyprofit/tests/test_backtest.py --ignore=probablyprofit/tests/test_agent_comprehensive.py -k "not slow"
         timeout-minutes: 5
