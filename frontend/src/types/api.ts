@@ -104,6 +104,7 @@ export interface Trade {
   id: number;
   order_id: string | null;
   market_id: string;
+  market_name?: string;
   outcome: string;
   side: string;
   size: number;

@@ -8,6 +8,7 @@ import tempfile
 from datetime import datetime, timedelta
 
 import pytest
+import pytest_asyncio
 
 # Skip if aiosqlite not available
 pytest.importorskip("aiosqlite")
@@ -15,7 +16,7 @@ pytest.importorskip("aiosqlite")
 from probablyprofit.storage.historical import HistoricalDataStore, MarketSnapshot, PricePoint
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def store():
     """Create a temporary historical data store."""
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:

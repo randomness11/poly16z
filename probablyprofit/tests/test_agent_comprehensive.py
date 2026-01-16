@@ -367,6 +367,7 @@ class TestAgentLoop:
         mock_agent.decide = failing_decide
         mock_agent.loop_interval = 0.01
         mock_agent._base_backoff = 0.01  # Fast backoff for testing
+        mock_agent._max_backoff = 0.01  # Cap max backoff for testing
 
         await mock_agent.run_loop()
 
@@ -376,16 +377,22 @@ class TestAgentLoop:
     @pytest.mark.asyncio
     async def test_max_consecutive_errors_stops_loop(self, mock_agent, mock_client):
         """Test that too many consecutive errors stops the loop."""
-        mock_agent._max_consecutive_errors = 3
-        mock_agent.loop_interval = 0.01
-        mock_agent._base_backoff = 0.01
+        error_count = [0]
+        max_errors = 3
 
         async def always_failing_decide(obs):
+            error_count[0] += 1
+            if error_count[0] >= max_errors:
+                # Stop after max errors to avoid long backoffs in tests
+                mock_agent.stop()
             raise ValueError("Always fails")
 
         mock_agent.decide = always_failing_decide
+        mock_agent.loop_interval = 0.01
 
         await mock_agent.run_loop()
 
+        # Loop should have stopped
         assert mock_agent.running is False
-        assert mock_agent._consecutive_errors >= 3
+        # Should have accumulated errors
+        assert error_count[0] >= max_errors

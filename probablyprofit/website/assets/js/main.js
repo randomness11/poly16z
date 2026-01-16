@@ -2,6 +2,35 @@
 // ProbablyProfit Website - Interactive Terminal & Utilities
 // =========================================================
 
+// =========================================================
+// TOAST NOTIFICATIONS
+// =========================================================
+
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <span class="toast-icon">${type === 'success' ? '✓' : 'ℹ'}</span>
+        <span class="toast-message">${message}</span>
+    `;
+
+    container.appendChild(toast);
+
+    // Trigger animation
+    requestAnimationFrame(() => {
+        toast.classList.add('show');
+    });
+
+    // Remove after delay
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 2500);
+}
+
 // Terminal simulation data
 const terminalScript = [
     { type: 'command', text: 'probablyprofit run -s strategy.txt --kelly', delay: 50 },
@@ -194,6 +223,7 @@ function copyInstall() {
     navigator.clipboard.writeText(command).then(() => {
         hint.textContent = 'copied!';
         hint.classList.add('copied');
+        showToast('Copied to clipboard: pip install probablyprofit');
 
         setTimeout(() => {
             hint.textContent = 'click to copy';
@@ -213,6 +243,7 @@ function copyCode() {
     navigator.clipboard.writeText(code).then(() => {
         btn.textContent = 'Copied!';
         btn.classList.add('copied');
+        showToast('Python code copied to clipboard');
 
         setTimeout(() => {
             btn.textContent = 'Copy';
@@ -335,10 +366,12 @@ function showStrategy(index) {
 // Copy strategy
 function copyStrategy() {
     const content = document.getElementById('strategyContent').textContent;
+    const filename = document.getElementById('strategyFilename').textContent;
     const btn = document.querySelector('.copy-strategy-btn');
 
     navigator.clipboard.writeText(content).then(() => {
         btn.textContent = 'Copied!';
+        showToast(`Strategy "${filename}" copied to clipboard`);
         setTimeout(() => {
             btn.textContent = 'Copy';
         }, 2000);

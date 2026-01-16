@@ -20,6 +20,9 @@
     <div class="glow glow-1"></div>
     <div class="glow glow-2"></div>
 
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
     <div class="container">
         <nav>
             <a href="/" class="logo">
@@ -46,7 +49,11 @@
                     <span class="status-dot"></span>
                     <span>v0.1.0</span>
                     <span class="divider">/</span>
-                    <span>open source</span>
+                    <a href="https://pypi.org/project/probablyprofit/" class="badge-link" target="_blank">
+                        <img src="https://img.shields.io/pypi/v/probablyprofit?style=flat&color=22c55e&label=PyPI" alt="PyPI" />
+                    </a>
+                    <span class="divider">/</span>
+                    <span class="tests-badge">374 tests passing</span>
                     <span class="divider">/</span>
                     <span>MIT license</span>
                 </div>
@@ -327,6 +334,65 @@ SIZING: $10-25 per trade, max 5 positions</pre>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Comparison Table -->
+            <div class="comparison-section">
+                <h2>Why ProbablyProfit?</h2>
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th class="highlight">ProbablyProfit</th>
+                            <th>Manual Trading</th>
+                            <th>Other Bots</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Strategy Definition</td>
+                            <td class="highlight"><span class="check-yes">Plain English</span></td>
+                            <td>N/A</td>
+                            <td>Code required</td>
+                        </tr>
+                        <tr>
+                            <td>AI Analysis</td>
+                            <td class="highlight"><span class="check-yes">GPT-4, Claude, Gemini</span></td>
+                            <td><span class="check-no">None</span></td>
+                            <td><span class="check-partial">Limited</span></td>
+                        </tr>
+                        <tr>
+                            <td>Risk Management</td>
+                            <td class="highlight"><span class="check-yes">Kelly + Limits</span></td>
+                            <td><span class="check-partial">Manual</span></td>
+                            <td><span class="check-partial">Basic</span></td>
+                        </tr>
+                        <tr>
+                            <td>Paper Trading</td>
+                            <td class="highlight"><span class="check-yes">Built-in</span></td>
+                            <td><span class="check-no">No</span></td>
+                            <td><span class="check-partial">Some</span></td>
+                        </tr>
+                        <tr>
+                            <td>Multi-Platform</td>
+                            <td class="highlight"><span class="check-yes">Polymarket + Kalshi</span></td>
+                            <td><span class="check-partial">Manual switch</span></td>
+                            <td><span class="check-no">Usually one</span></td>
+                        </tr>
+                        <tr>
+                            <td>Cost</td>
+                            <td class="highlight"><span class="check-yes">Free + API costs</span></td>
+                            <td><span class="check-yes">Free</span></td>
+                            <td>$50-500/mo</td>
+                        </tr>
+                        <tr>
+                            <td>Open Source</td>
+                            <td class="highlight"><span class="check-yes">MIT License</span></td>
+                            <td>N/A</td>
+                            <td><span class="check-no">Closed</span></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
 
             <!-- Code Example Section -->

@@ -12,7 +12,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 
-async def test_imports():
+async def check_imports():
     """Test that all modules can be imported."""
     print("🧪 Testing imports...")
 
@@ -43,7 +43,7 @@ async def test_imports():
         return False
 
 
-async def test_app_creation():
+async def check_app_creation():
     """Test that FastAPI app can be created."""
     print("\n🧪 Testing FastAPI app creation...")
 
@@ -77,7 +77,7 @@ async def test_app_creation():
         return False
 
 
-async def test_database_integration():
+async def check_database_integration():
     """Test database integration."""
     print("\n🧪 Testing database integration...")
 
@@ -100,7 +100,7 @@ async def test_database_integration():
         return False
 
 
-async def test_mock_agent_state():
+async def check_mock_agent_state():
     """Test setting mock agent state."""
     print("\n🧪 Testing agent state management...")
 
@@ -144,7 +144,7 @@ async def test_mock_agent_state():
         return False
 
 
-async def test_api_endpoints():
+async def check_api_endpoints():
     """Test API endpoint logic (without HTTP)."""
     print("\n🧪 Testing API endpoint logic...")
 
@@ -217,11 +217,11 @@ async def main():
     results = []
 
     # Run tests
-    results.append(("Imports", await test_imports()))
-    results.append(("App Creation", await test_app_creation()))
-    results.append(("Database Integration", await test_database_integration()))
-    results.append(("Mock Agent State", await test_mock_agent_state()))
-    results.append(("API Endpoints", await test_api_endpoints()))
+    results.append(("Imports", await check_imports()))
+    results.append(("App Creation", await check_app_creation()))
+    results.append(("Database Integration", await check_database_integration()))
+    results.append(("Mock Agent State", await check_mock_agent_state()))
+    results.append(("API Endpoints", await check_api_endpoints()))
 
     # Summary
     print("\n" + "=" * 60)

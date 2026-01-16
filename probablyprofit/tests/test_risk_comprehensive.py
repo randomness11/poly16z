@@ -219,7 +219,9 @@ class TestTradeRecording:
         assert risk_manager.current_capital == 1005.0
 
     def test_exposure_tracking(self, risk_manager):
-        risk_manager.record_trade(size=100, price=0.5)
+        # Exposure is tracked via open positions, not trades
+        # update_position adds to open_positions which recalculate_exposure uses
+        risk_manager.update_position("test_market", size=100, price=0.5)
         assert risk_manager.current_exposure == 50.0  # 100 * 0.5
 
 

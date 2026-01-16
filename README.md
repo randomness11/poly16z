@@ -4,9 +4,10 @@
 
 ### AI-Powered Trading Framework for Prediction Markets
 
+[![PyPI](https://img.shields.io/pypi/v/probablyprofit?style=for-the-badge&logo=pypi&logoColor=white)](https://pypi.org/project/probablyprofit/)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/downloads/)
+[![Tests](https://img.shields.io/badge/Tests-374%20Passing-brightgreen?style=for-the-badge)](https://github.com/randomness11/probablyprofit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/Tests-351%20Passing-brightgreen?style=for-the-badge)](https://github.com/randomness11/probablyprofit)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://github.com/randomness11/probablyprofit)
 
 **Build autonomous trading bots for [Polymarket](https://polymarket.com) and [Kalshi](https://kalshi.com) using natural language strategies.**

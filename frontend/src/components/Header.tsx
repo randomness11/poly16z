@@ -1,11 +1,20 @@
-import { Bot, Wifi, WifiOff, Play, Square, Settings } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Bot, Wifi, WifiOff, Play, Square, Settings, LayoutDashboard, History, FileCode } from 'lucide-react';
 import { useStatus, useWebSocket, useAgentControl } from '../hooks/useApi';
 import clsx from 'clsx';
 
 export function Header() {
+  const location = useLocation();
   const { data: status } = useStatus();
   const { connected } = useWebSocket();
   const { start, stop, loading } = useAgentControl();
+
+  const navItems = [
+    { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/strategy', label: 'Strategy', icon: FileCode },
+    { path: '/history', label: 'History', icon: History },
+    { path: '/settings', label: 'Settings', icon: Settings },
+  ];
 
   const formatUptime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -17,15 +26,40 @@ export function Header() {
     <header className="border-b border-white/10 bg-slate-900/50 backdrop-blur-xl sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
-              <Bot className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-white">probablyprofit</h1>
-              <p className="text-xs text-slate-400">AI Trading Bot</p>
-            </div>
+          {/* Logo & Nav */}
+          <div className="flex items-center gap-8">
+            <Link to="/" className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+                <Bot className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-white">probablyprofit</h1>
+                <p className="text-xs text-slate-400">AI Trading Bot</p>
+              </div>
+            </Link>
+
+            {/* Navigation */}
+            <nav className="hidden md:flex items-center gap-1">
+              {navItems.map(item => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={clsx(
+                      'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
+                      isActive
+                        ? 'bg-purple-500/20 text-purple-400'
+                        : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                    )}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
           </div>
 
           {/* Status */}
@@ -98,9 +132,6 @@ export function Header() {
                   Start
                 </button>
               )}
-              <button className="p-1.5 rounded-lg text-slate-400 hover:bg-white/5 transition-colors">
-                <Settings className="w-5 h-5" />
-              </button>
             </div>
           </div>
         </div>
