@@ -5,6 +5,45 @@ All notable changes to ProbablyProfit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-01-19
+
+### Fixed
+
+- **Test Stability**: Fixed flaky test that was causing CI failures
+  - Marked slow test with `@pytest.mark.slow` to skip in normal CI runs
+  - Added proper pytest configuration in `pyproject.toml`
+  - Removed `continue-on-error: true` from CI that was masking failures
+
+- **Frontend Settings Page**: Removed misleading save button
+  - Settings page now clearly indicates to edit `.env` file for configuration
+  - Removed non-functional save functionality
+
+- **Google Trends Fallback**: Added warning log when API is unavailable
+  - Users now see a clear message when neutral fallback data is used
+
+### Added
+
+- **Documentation**: New troubleshooting and security guides
+  - `docs/TROUBLESHOOTING.md` - Common issues and solutions
+  - `docs/SECURITY.md` - Best practices for secrets management
+
+### Changed
+
+- CI workflow now uses pytest markers instead of ignoring test files
+- Tests timeout reduced to 30s with proper slow test exclusion
+
+---
+
+## [1.0.0] - 2026-01-15
+
+### Added
+
+- Production-ready release with all critical fixes completed
+- Comprehensive preflight validation system
+- Plugin architecture with working examples
+
+---
+
 ## [0.1.0] - 2025-01-11
 
 ### Added
