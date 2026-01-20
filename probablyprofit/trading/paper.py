@@ -13,11 +13,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from loguru import logger
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class PaperTrade(BaseModel):
     """Record of a paper trade."""
+
+    model_config = ConfigDict(ser_json_timedelta="iso8601")
 
     trade_id: str
     timestamp: datetime
@@ -30,12 +32,11 @@ class PaperTrade(BaseModel):
     value: float  # size * price
     fees: float = 0.0
 
-    class Config:
-        json_encoders = {datetime: lambda v: v.isoformat()}
-
 
 class PaperPosition(BaseModel):
     """A virtual position in a market."""
+
+    model_config = ConfigDict(ser_json_timedelta="iso8601")
 
     market_id: str
     market_question: str
@@ -67,9 +68,6 @@ class PaperPosition(BaseModel):
         if self.cost_basis == 0:
             return 0.0
         return (self.unrealized_pnl / self.cost_basis) * 100
-
-    class Config:
-        json_encoders = {datetime: lambda v: v.isoformat()}
 
 
 class PaperPortfolio(BaseModel):
