@@ -4,7 +4,7 @@ import { DashboardLayout } from './layouts/DashboardLayout';
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/probablyprofit">
       <Routes>
         {/* Landing page */}
         <Route path="/" element={<LandingPage />} />
