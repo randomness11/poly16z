@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { ClipboardIcon, CheckIcon, StarIcon, CpuChipIcon, ArrowsRightLeftIcon, ShieldCheckIcon, BoltIcon, ChartBarIcon, CommandLineIcon } from '@heroicons/react/24/outline';
 import { PixelLogo } from './components/PixelLogo';
 import '../../styles/landing.css';
@@ -124,7 +123,7 @@ export function LandingPage() {
 
             {/* Tagline */}
             <p className="mt-4 text-lg text-landing-text-muted font-mono">
-              AI-powered prediction market trading.<br />
+              Open-source framework for building AI trading bots.<br />
               Write strategy in English. Let AI trade.
             </p>
 
@@ -160,12 +159,6 @@ export function LandingPage() {
               >
                 View on PyPI
               </a>
-              <Link
-                to="/app"
-                className="px-5 py-2.5 border border-landing-border text-white font-mono text-sm hover:border-white/40 transition-colors"
-              >
-                Demo Dashboard
-              </Link>
             </div>
 
             {/* Providers */}
@@ -211,7 +204,16 @@ export function LandingPage() {
       {/* Minimal Footer */}
       <footer className="border-t border-landing-border py-3">
         <p className="text-center text-landing-text-muted font-mono text-xs">
-          probablyprofit — probably profit, possibly not
+          made by{' '}
+          <a
+            href="https://x.com/ankitkr0"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-white hover:text-green-400 transition-colors"
+          >
+            @ankitkr0
+          </a>
+          {' '}• open source • MIT license
         </p>
       </footer>
     </div>
