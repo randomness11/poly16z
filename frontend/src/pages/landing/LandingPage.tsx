@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ClipboardIcon, CheckIcon, StarIcon, CpuChipIcon, ArrowsRightLeftIcon, ShieldCheckIcon, BoltIcon, ChartBarIcon, CommandLineIcon } from '@heroicons/react/24/outline';
+import { PixelLogo } from './components/PixelLogo';
 import '../../styles/landing.css';
 
 const terminalLines = [
@@ -119,9 +120,7 @@ export function LandingPage() {
           {/* Right - Info */}
           <div className="order-1 lg:order-2 flex flex-col">
             {/* Logo */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold font-mono text-white tracking-tight">
-              probably<span className="text-green-400">profit</span>
-            </h1>
+            <PixelLogo />
 
             {/* Tagline */}
             <p className="mt-4 text-lg text-landing-text-muted font-mono">
