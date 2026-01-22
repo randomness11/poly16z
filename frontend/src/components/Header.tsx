@@ -10,10 +10,10 @@ export function Header() {
   const { start, stop, loading } = useAgentControl();
 
   const navItems = [
-    { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/strategy', label: 'Strategy', icon: FileCode },
-    { path: '/history', label: 'History', icon: History },
-    { path: '/settings', label: 'Settings', icon: Settings },
+    { path: '/app', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/app/strategy', label: 'Strategy', icon: FileCode },
+    { path: '/app/history', label: 'History', icon: History },
+    { path: '/app/settings', label: 'Settings', icon: Settings },
   ];
 
   const formatUptime = (seconds: number) => {
@@ -28,7 +28,7 @@ export function Header() {
         <div className="flex items-center justify-between">
           {/* Logo & Nav */}
           <div className="flex items-center gap-8">
-            <Link to="/" className="flex items-center gap-3">
+            <Link to="/app" className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
                 <Bot className="w-6 h-6 text-white" />
               </div>

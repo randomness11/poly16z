@@ -1,7 +1,7 @@
 """
 News-Driven Bot Example
 
-Trades based on breaking news and events.
+Trades based on breaking news and events using Perplexity for news context.
 """
 
 import asyncio
@@ -10,8 +10,7 @@ import os
 from dotenv import load_dotenv
 
 from probablyprofit import AnthropicAgent, PolymarketClient, RiskManager
-from probablyprofit.data import NewsCollector
-from probablyprofit.utils import setup_logging
+from probablyprofit.sources import PerplexityClient
 
 # Load environment variables
 load_dotenv()
@@ -54,86 +53,47 @@ When analyzing markets and news:
 - What's the expected magnitude of impact?
 
 Speed matters, but accuracy matters more.
-
-Always respond with a JSON decision object.
 """
-
-
-class NewsBot(AnthropicAgent):
-    """Custom agent that incorporates news data."""
-
-    def __init__(self, *args, news_collector: NewsCollector, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.news_collector = news_collector
-
-    async def observe(self):
-        """Enhanced observation that includes news."""
-        # Get base observation
-        observation = await super().observe()
-
-        # Collect recent news
-        news = await self.news_collector.collect(hours=2)
-
-        # Add news to observation signals
-        observation.signals["news"] = [
-            {
-                "title": article.title,
-                "source": article.source,
-                "published": article.published.isoformat(),
-                "summary": article.summary,
-            }
-            for article in news[:10]  # Top 10 most recent
-        ]
-
-        return observation
 
 
 async def main():
     """Run the news-driven bot."""
-    # Setup logging
-    setup_logging(level="INFO")
-
     # Initialize Polymarket client
     client = PolymarketClient(
-        api_key=os.getenv("POLYMARKET_API_KEY"),
-        secret=os.getenv("POLYMARKET_SECRET"),
-        passphrase=os.getenv("POLYMARKET_PASSPHRASE"),
+        private_key=os.getenv("PRIVATE_KEY"),
     )
 
-    # Initialize news collector
-    news_collector = NewsCollector(
-        news_api_key=os.getenv("NEWS_API_KEY"),
-    )
+    # Initialize news client (Perplexity)
+    perplexity_key = os.getenv("PERPLEXITY_API_KEY")
+    news_client = PerplexityClient(api_key=perplexity_key) if perplexity_key else None
 
     # Initialize risk manager
     risk_manager = RiskManager(
-        initial_capital=float(os.getenv("MAX_TOTAL_EXPOSURE", "1000")),
+        initial_capital=float(os.getenv("INITIAL_CAPITAL", "1000")),
     )
-    risk_manager.limits.max_positions = 4
 
-    # Initialize AI agent with news integration
-    agent = NewsBot(
+    # Initialize AI agent
+    agent = AnthropicAgent(
         client=client,
         risk_manager=risk_manager,
-        anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
         strategy_prompt=NEWS_STRATEGY,
-        news_collector=news_collector,
-        name="NewsBot",
-        loop_interval=180,  # Check every 3 minutes for news
     )
 
     # Run the agent
     print("🚀 Starting News-Driven Bot...")
     print("📊 Strategy: News-driven trading")
     print("⏱️  Loop interval: 3 minutes")
-    print("💰 Max exposure: ${}".format(os.getenv("MAX_TOTAL_EXPOSURE", "1000")))
+    print("💰 Initial capital: ${}".format(os.getenv("INITIAL_CAPITAL", "1000")))
+    if news_client:
+        print("📰 News source: Perplexity API")
+    else:
+        print("⚠️  No PERPLEXITY_API_KEY - news context disabled")
     print("\nPress Ctrl+C to stop\n")
 
     try:
         await agent.run()
     except KeyboardInterrupt:
         print("\n\n🛑 Stopping bot...")
-        agent.stop()
         await client.close()
 
     # Print final stats

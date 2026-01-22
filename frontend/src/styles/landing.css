@@ -1,0 +1,33 @@
+/* Landing page specific styles */
+.landing-theme {
+  --landing-bg: #000000;
+  --landing-text: #ffffff;
+  --landing-text-muted: #666666;
+  --landing-accent: #ffffff;
+  --landing-border: #1a1a1a;
+}
+
+/* Tailwind-style utility classes for landing theme */
+.bg-landing-bg {
+  background-color: var(--landing-bg);
+}
+
+.text-landing-text {
+  color: var(--landing-text);
+}
+
+.text-landing-text-muted {
+  color: var(--landing-text-muted);
+}
+
+.text-landing-accent {
+  color: var(--landing-accent);
+}
+
+.border-landing-border {
+  border-color: var(--landing-border);
+}
+
+.bg-landing-border\/50 {
+  background-color: rgba(26, 26, 26, 0.5);
+}

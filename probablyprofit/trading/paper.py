@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from loguru import logger
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 
 class PaperTrade(BaseModel):
@@ -32,6 +32,10 @@ class PaperTrade(BaseModel):
     value: float  # size * price
     fees: float = 0.0
 
+    @field_serializer("timestamp")
+    def serialize_timestamp(self, v: datetime) -> str:
+        return v.isoformat()
+
 
 class PaperPosition(BaseModel):
     """A virtual position in a market."""
@@ -44,8 +48,12 @@ class PaperPosition(BaseModel):
     size: float
     avg_price: float
     current_price: float = 0.5
-    opened_at: datetime = field(default_factory=datetime.now)
-    trades: List[str] = []  # trade_ids
+    opened_at: datetime = Field(default_factory=datetime.now)
+    trades: List[str] = Field(default_factory=list)  # trade_ids
+
+    @field_serializer("opened_at")
+    def serialize_opened_at(self, v: datetime) -> str:
+        return v.isoformat()
 
     @property
     def value(self) -> float:
@@ -73,14 +81,20 @@ class PaperPosition(BaseModel):
 class PaperPortfolio(BaseModel):
     """Complete paper trading portfolio state."""
 
+    model_config = ConfigDict(ser_json_timedelta="iso8601")
+
     initial_capital: float = 1000.0
     cash: float = 1000.0
-    positions: Dict[str, PaperPosition] = {}
-    trades: List[PaperTrade] = []
+    positions: Dict[str, PaperPosition] = Field(default_factory=dict)
+    trades: List[PaperTrade] = Field(default_factory=list)
     realized_pnl: float = 0.0
     total_fees: float = 0.0
-    created_at: datetime = field(default_factory=datetime.now)
-    last_updated: datetime = field(default_factory=datetime.now)
+    created_at: datetime = Field(default_factory=datetime.now)
+    last_updated: datetime = Field(default_factory=datetime.now)
+
+    @field_serializer("created_at", "last_updated")
+    def serialize_datetime(self, v: datetime) -> str:
+        return v.isoformat()
 
     @property
     def positions_value(self) -> float:
@@ -108,9 +122,6 @@ class PaperPortfolio(BaseModel):
     def unrealized_pnl(self) -> float:
         """Total unrealized P&L."""
         return sum(p.unrealized_pnl for p in self.positions.values())
-
-    class Config:
-        json_encoders = {datetime: lambda v: v.isoformat()}
 
 
 class PaperTradingEngine:

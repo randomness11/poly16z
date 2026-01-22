@@ -29,16 +29,16 @@ cp .env.example .env
 Edit `.env` and add your API keys:
 
 ```bash
-# Required
+# Required - at least one AI provider
 ANTHROPIC_API_KEY=sk-ant-...
+# or OPENAI_API_KEY=sk-...
+# or GOOGLE_API_KEY=...
 
-# Optional (for live trading)
-POLYMARKET_API_KEY=your_key
-POLYMARKET_SECRET=your_secret
-POLYMARKET_PASSPHRASE=your_passphrase
+# Optional (for live trading) - your Polygon wallet private key
+PRIVATE_KEY=0x_your_private_key_here
 
-# Optional (for news bot)
-NEWS_API_KEY=your_newsapi_key
+# Optional (for news context)
+PERPLEXITY_API_KEY=pplx-...
 ```
 
 ## Step 3: Run the Quickstart
@@ -82,8 +82,7 @@ Create a new file `my_bot.py`:
 import asyncio
 import os
 from dotenv import load_dotenv
-from probablyprofit import PolymarketClient, AnthropicAgent, RiskManager
-from polymarket_bot.utils import setup_logging
+from probablyprofit import AnthropicAgent, PolymarketClient, RiskManager
 
 load_dotenv()
 
@@ -102,17 +101,11 @@ Entry rules:
 Exit rules:
 - Take profit at [X%]
 - Stop loss at [Y%]
-
-Always respond with a JSON decision object.
 """
 
 async def main():
-    setup_logging(level="INFO")
-
     client = PolymarketClient(
-        api_key=os.getenv("POLYMARKET_API_KEY"),
-        secret=os.getenv("POLYMARKET_SECRET"),
-        passphrase=os.getenv("POLYMARKET_PASSPHRASE"),
+        private_key=os.getenv("PRIVATE_KEY"),
     )
 
     risk_manager = RiskManager(initial_capital=1000.0)
@@ -120,9 +113,7 @@ async def main():
     agent = AnthropicAgent(
         client=client,
         risk_manager=risk_manager,
-        anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
         strategy_prompt=MY_STRATEGY,
-        loop_interval=300,  # 5 minutes
     )
 
     await agent.run()
@@ -149,30 +140,24 @@ Check out [docs/API_REFERENCE.md](docs/API_REFERENCE.md) for detailed API docume
 
 ### 3. Backtest Your Strategy
 
-Before risking real money, backtest:
+Before risking real money, backtest via CLI:
 
-```python
-from polymarket_bot.backtesting import BacktestEngine
-
-backtest = BacktestEngine(initial_capital=1000.0)
-result = await backtest.run_backtest(
-    agent=my_agent,
-    market_data=historical_markets,
-    timestamps=timestamps
-)
-
-print(f"Return: {result.total_return_pct:.2%}")
-print(f"Sharpe: {result.sharpe_ratio:.2f}")
-print(f"Win Rate: {result.win_rate:.1%}")
+```bash
+probablyprofit backtest --strategy "your strategy" --days 30
 ```
+
+Or check backtesting results in the web dashboard.
 
 ### 4. Use Paper Trading
 
 Test with fake money first:
 
 ```bash
-# In .env
-TRADING_MODE=paper
+# Via CLI
+probablyprofit run "your strategy" --paper --paper-capital 10000
+
+# Or via Python
+agent = AnthropicAgent(..., paper_trading=True)
 ```
 
 ### 5. Go Live (Carefully!)

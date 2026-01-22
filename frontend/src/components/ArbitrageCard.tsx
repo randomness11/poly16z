@@ -1,16 +1,17 @@
 import { Zap, RefreshCw, TrendingUp } from 'lucide-react';
 import { useArbitrage } from '../hooks/useApi';
+import type { ArbitrageOpportunity } from '../types/api';
 import clsx from 'clsx';
 
 export function ArbitrageCard() {
   const { data, scanning, scan } = useArbitrage();
 
-  const opportunities = data?.opportunities || [];
+  const opportunities: ArbitrageOpportunity[] = data?.opportunities || [];
   const bestProfit = opportunities.length > 0
-    ? Math.max(...opportunities.map((o) => o.net_profit_pct))
+    ? Math.max(...opportunities.map((o: ArbitrageOpportunity) => o.net_profit_pct))
     : 0;
   const avgConfidence = opportunities.length > 0
-    ? opportunities.reduce((sum, o) => sum + o.confidence, 0) / opportunities.length
+    ? opportunities.reduce((sum: number, o: ArbitrageOpportunity) => sum + o.confidence, 0) / opportunities.length
     : 0;
 
   return (
@@ -79,7 +80,7 @@ export function ArbitrageCard() {
               : 'Click "Scan Markets" to detect arbitrage opportunities'}
           </div>
         ) : (
-          opportunities.map((opp, i) => (
+          opportunities.map((opp: ArbitrageOpportunity, i: number) => (
             <OpportunityCard key={i} opportunity={opp} />
           ))
         )}

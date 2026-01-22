@@ -1,6 +1,6 @@
 """Risk management primitives."""
 
-from probablyprofit.risk.manager import RiskManager
+from probablyprofit.risk.manager import RiskLimits, RiskManager
 from probablyprofit.risk.positions import (
     CorrelationDetector,
     CorrelationWarning,
@@ -11,6 +11,7 @@ from probablyprofit.risk.positions import (
 
 __all__ = [
     "RiskManager",
+    "RiskLimits",
     # Position Management
     "PositionManager",
     "TrailingStop",

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Key, Shield, Bell, Palette } from 'lucide-react';
-import { useAgentControl } from '../hooks/useApi';
 
 interface SettingsSection {
   id: string;
@@ -17,7 +16,6 @@ const sections: SettingsSection[] = [
 
 export function Settings() {
   const [activeSection, setActiveSection] = useState('api');
-  const { setDryRun, loading } = useAgentControl();
 
   // Local state for settings
   const [settings, setSettings] = useState({

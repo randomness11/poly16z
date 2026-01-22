@@ -5,7 +5,7 @@ A modular framework for building AI-powered trading bots for Polymarket.
 Write your strategy in English. Let AI do the rest. Probably profit.
 """
 
-__version__ = "0.1.0"
+__version__ = "1.0.2"
 
 # Lazy imports to avoid loading heavy modules until needed
 # This keeps CLI startup fast and prevents debug log spam
@@ -29,6 +29,10 @@ def __getattr__(name):
         from probablyprofit.risk.manager import RiskManager
 
         return RiskManager
+    elif name == "RiskLimits":
+        from probablyprofit.risk.manager import RiskLimits
+
+        return RiskLimits
     elif name == "BacktestEngine":
         from probablyprofit.backtesting.engine import BacktestEngine
 
@@ -59,6 +63,7 @@ __all__ = [
     "BaseAgent",
     "AnthropicAgent",
     "RiskManager",
+    "RiskLimits",
     "BacktestEngine",
     "GeminiAgent",
     "OpenAIAgent",

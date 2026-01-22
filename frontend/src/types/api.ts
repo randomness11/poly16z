@@ -93,3 +93,22 @@ export interface WebSocketMessage {
   type: 'status' | 'trade' | 'position' | 'alert';
   data: unknown;
 }
+
+export interface ArbitrageOpportunity {
+  net_profit_pct: number;
+  confidence: number;
+  polymarket_question: string;
+  buy_side: string;
+  buy_platform: string;
+  buy_price: number;
+  sell_side: string;
+  sell_platform: string;
+  sell_price: number;
+  combined_cost: number;
+}
+
+export interface ArbitrageResponse {
+  opportunities: ArbitrageOpportunity[];
+  matched_pairs_count: number;
+  last_scan: string | null;
+}

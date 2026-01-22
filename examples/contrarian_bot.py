@@ -10,7 +10,6 @@ import os
 from dotenv import load_dotenv
 
 from probablyprofit import AnthropicAgent, PolymarketClient, RiskManager
-from probablyprofit.utils import setup_logging
 
 # Load environment variables
 load_dotenv()
@@ -57,14 +56,9 @@ Always respond with a JSON decision object.
 
 async def main():
     """Run the contrarian bot."""
-    # Setup logging
-    setup_logging(level="INFO")
-
     # Initialize Polymarket client
     client = PolymarketClient(
-        api_key=os.getenv("POLYMARKET_API_KEY"),
-        secret=os.getenv("POLYMARKET_SECRET"),
-        passphrase=os.getenv("POLYMARKET_PASSPHRASE"),
+        private_key=os.getenv("PRIVATE_KEY"),
     )
 
     # Initialize risk manager with conservative limits

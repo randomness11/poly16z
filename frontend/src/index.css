@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* Landing theme variables */
+.landing-theme {
+  --landing-bg: #000000;
+  --landing-text: #ffffff;
+  --landing-text-muted: #666666;
+  --landing-accent: #ffffff;
+  --landing-border: #1a1a1a;
+}
+
 :root {
   --bg-primary: #0a0a0b;
   --bg-secondary: #18181b;

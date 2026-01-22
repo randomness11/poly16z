@@ -90,7 +90,7 @@ def show_quick_start():
 
 @click.group(invoke_without_command=True)
 @click.pass_context
-@click.version_option(version="0.1.0", prog_name="probablyprofit")
+@click.version_option(version="1.0.2", prog_name="probablyprofit")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output for debugging")
 def cli(ctx, verbose):
     """

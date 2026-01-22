@@ -57,3 +57,7 @@ logs/
 # Backtest results
 backtests/
 results/
+
+# TypeScript build artifacts
+*.tsbuildinfo
+vite.config.d.ts
