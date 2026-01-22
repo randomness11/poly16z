@@ -65,3 +65,10 @@ results/
 # TypeScript build artifacts
 *.tsbuildinfo
 vite.config.d.ts
+
+# Runtime
+.probablyprofit/
+probablyprofit.db
+
+# Frontend (keep in git for GitHub Pages, but exclude node_modules)
+frontend/node_modules/

@@ -5,7 +5,7 @@ A modular framework for building AI-powered trading bots for Polymarket.
 Write your strategy in English. Let AI do the rest. Probably profit.
 """
 
-__version__ = "1.0.2"
+__version__ = "1.1.0"
 
 # Lazy imports to avoid loading heavy modules until needed
 # This keeps CLI startup fast and prevents debug log spam
@@ -55,19 +55,51 @@ def __getattr__(name):
         from probablyprofit.api.order_manager import OrderManager
 
         return OrderManager
+    elif name == "EnsembleAgent":
+        from probablyprofit.agent.ensemble import EnsembleAgent
+
+        return EnsembleAgent
+    elif name == "FallbackAgent":
+        from probablyprofit.agent.fallback import FallbackAgent
+
+        return FallbackAgent
+    elif name == "PaperTradingEngine":
+        from probablyprofit.trading.paper import PaperTradingEngine
+
+        return PaperTradingEngine
+    elif name == "Config":
+        from probablyprofit.config import Config
+
+        return Config
+    elif name == "get_config":
+        from probablyprofit.config import get_config
+
+        return get_config
     raise AttributeError(f"module 'probablyprofit' has no attribute '{name}'")
 
 
 __all__ = [
-    "PolymarketClient",
+    # Version
+    "__version__",
+    # Agents (all of them)
     "BaseAgent",
     "AnthropicAgent",
+    "OpenAIAgent",
+    "GeminiAgent",
+    "EnsembleAgent",
+    "FallbackAgent",
+    # Client & Trading
+    "PolymarketClient",
+    "OrderManager",
+    "PaperTradingEngine",
+    # Risk
     "RiskManager",
     "RiskLimits",
+    # Backtesting
     "BacktestEngine",
-    "GeminiAgent",
-    "OpenAIAgent",
-    "OrderManager",
+    # Config
+    "Config",
+    "get_config",
 ]
 
 # Load environment variables (this is lightweight)

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "probablyprofit"
-version = "1.0.2"
+version = "1.1.0"
 description = "AI-powered prediction market trading bots. Write strategy in English, let AI trade for you."
 authors = [{name = "ProbablyProfit Contributors", email = "hello@probablyprofit.dev"}]
 readme = "README.md"
@@ -99,15 +99,9 @@ db = [
     "greenlet>=3.0.0",  # Required for async SQLAlchemy
 ]
 
-# Web dashboard
-web = [
-    "fastapi>=0.104.0",
-    "uvicorn[standard]>=0.24.0",
-]
-
 # Full install - everything
 full = [
-    "probablyprofit[ai,polymarket,intel,data,db,web]",
+    "probablyprofit[ai,polymarket,intel,data,db]",
 ]
 
 # Development
@@ -148,6 +142,10 @@ pp = "probablyprofit.cli.main:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["probablyprofit*"]
+exclude = ["frontend*", "tests*"]
+
+[tool.setuptools.package-data]
+probablyprofit = ["py.typed"]
 
 [tool.mypy]
 python_version = "3.10"

@@ -27,6 +27,10 @@ def __getattr__(name):
         from probablyprofit.api.order_manager import OrderManager
 
         return OrderManager
+    elif name == "WalletSigner":
+        from probablyprofit.api.signer import WalletSigner
+
+        return WalletSigner
     raise AttributeError(f"module 'probablyprofit.api' has no attribute '{name}'")
 
 
@@ -37,4 +41,5 @@ __all__ = [
     "Position",
     "WebSocketClient",
     "OrderManager",
+    "WalletSigner",
 ]

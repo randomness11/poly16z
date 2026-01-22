@@ -49,9 +49,10 @@ probablyprofit/
 ├── risk/           # Risk management
 ├── storage/        # Database persistence
 ├── backtesting/    # Backtesting engine
-├── web/            # Web dashboard
-├── examples/       # Example strategy templates
+├── cli/            # Command-line interface
 └── tests/          # Unit tests
+
+examples/           # Example bots and strategy templates
 ```
 
 ## Adding a New Agent

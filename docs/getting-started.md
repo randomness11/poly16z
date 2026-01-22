@@ -132,11 +132,11 @@ python my_bot.py
 
 ### 1. Learn Prompt Engineering
 
-Read [docs/PROMPT_ENGINEERING.md](docs/PROMPT_ENGINEERING.md) to learn how to write effective trading strategies.
+Read [strategy-guide.md](strategy-guide.md) to learn how to write effective trading strategies.
 
 ### 2. Explore the API
 
-Check out [docs/API_REFERENCE.md](docs/API_REFERENCE.md) for detailed API documentation.
+Check out [api-reference.md](api-reference.md) for detailed API documentation.
 
 ### 3. Backtest Your Strategy
 

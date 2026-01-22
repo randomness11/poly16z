@@ -447,21 +447,7 @@ async def main():
             print("=" * 50 + "\n")
 
         elif agent:
-            # Check if web dashboard is enabled
-            enable_web = os.getenv("ENABLE_WEB_DASHBOARD", "false").lower() == "true"
-            web_port = int(os.getenv("WEB_DASHBOARD_PORT", "8000"))
-
-            if enable_web:
-                from probablyprofit.web.server import run_server_with_agent
-
-                await run_server_with_agent(
-                    agent=agent,
-                    agent_type=args.agent,
-                    strategy_name=args.strategy,
-                    port=web_port,
-                )
-            else:
-                await agent.run_loop()
+            await agent.run_loop()
     except KeyboardInterrupt:
         logger.info("🛑 Bot stopped by user.")
     except Exception as e:

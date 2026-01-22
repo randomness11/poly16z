@@ -868,27 +868,6 @@ def positions():
 
 
 @cli.command()
-@click.option("--port", "-p", type=int, default=8000, help="Port for dashboard")
-def dashboard(port: int):
-    """
-    Launch the web dashboard.
-    """
-    console.print(f"[bold]Starting dashboard on http://localhost:{port}[/bold]")
-    console.print("[dim]Press Ctrl+C to stop[/dim]\n")
-
-    try:
-        import uvicorn
-
-        from probablyprofit.web.app import create_app
-
-        app = create_app()
-        uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
-    except ImportError:
-        console.print("[red]uvicorn not installed.[/red]")
-        console.print("Run: pip install uvicorn")
-
-
-@cli.command()
 @click.option("--strategy-file", "-s", type=click.Path(exists=True), required=True)
 @click.option("--days", "-d", type=int, default=30)
 def backtest(strategy_file: str, days: int):

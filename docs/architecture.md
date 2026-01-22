@@ -45,11 +45,11 @@ probablyprofit/
 │   ├── engine.py        # BacktestEngine
 │   └── data.py          # MockDataGenerator
 │
-├── web/                 # Web Dashboard
-│   └── server.py        # FastAPI server
+├── cli/                 # Command-line Interface
+│   └── main.py          # CLI entry point
 │
-└── examples/            # Example Strategies
-    └── *.txt            # Strategy templates
+└── trading/             # Trading Engine
+    └── paper.py         # Paper trading simulation
 ```
 
 ## Core Abstractions
@@ -133,4 +133,4 @@ class MyStrategy(StrategyPlugin):
 | Add strategy type | Use plugin system or modify `agent/strategy.py` |
 | Add data source | Create plugin with `PluginType.DATA_SOURCE` |
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed examples.
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for detailed examples.
