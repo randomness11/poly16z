@@ -52,6 +52,10 @@ logs/
 *.sqlite
 *.csv
 *.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!tsconfig.*.json
 !poly16z/
 
 # Backtest results
