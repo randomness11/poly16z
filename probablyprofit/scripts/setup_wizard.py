@@ -14,7 +14,7 @@ except ImportError:
     print("⚠️  py-clob-client not found. Install with: pip install -e .")
 
 
-def setup_wizard():
+def setup_wizard() -> None:
     print("🤖 Welcome to Poly16z Setup Wizard!")
     print("-----------------------------------")
     print("This script will help you create your .env configuration file.")

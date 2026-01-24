@@ -18,7 +18,7 @@ import hashlib
 import os
 import secrets as python_secrets
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from loguru import logger
 
@@ -41,7 +41,7 @@ SECRET_KEYS = [
 ]
 
 
-def _get_keyring():
+def _get_keyring() -> Any:
     """Lazy import keyring to handle optional dependency."""
     try:
         import keyring
@@ -51,7 +51,7 @@ def _get_keyring():
         return None
 
 
-def _get_cryptography():
+def _get_cryptography() -> Optional[Dict[str, Any]]:
     """Lazy import cryptography to handle optional dependency."""
     try:
         from cryptography.fernet import Fernet
@@ -158,7 +158,7 @@ class SecretsManager:
         os.chmod(SALT_FILE, 0o600)
         return salt
 
-    def _get_fernet(self):
+    def _get_fernet(self) -> Any:
         """Get or create Fernet instance for encryption."""
         if self._fernet:
             return self._fernet
@@ -387,7 +387,8 @@ class SecretsManager:
         """Deserialize bytes to secrets dict."""
         import json
 
-        return json.loads(data.decode("utf-8"))
+        result: Dict[str, str] = json.loads(data.decode("utf-8"))
+        return result
 
     def get_all(self) -> Dict[str, Optional[str]]:
         """Get all known secrets."""
@@ -416,7 +417,7 @@ class SecretsManager:
         return migrated
 
     @property
-    def backend_info(self) -> Dict[str, bool]:
+    def backend_info(self) -> Dict[str, Any]:
         """Get info about available backends."""
         return {
             "keyring_available": self._keyring_available,

@@ -11,7 +11,7 @@ import time
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable, Optional, Set, Type, TypeVar, Union
+from typing import Any, Awaitable, Callable, Optional, Set, Type, TypeVar, Union, cast
 
 from loguru import logger
 
@@ -107,7 +107,7 @@ def retry(
     if retryable_exceptions:
         config.retryable_exceptions = retryable_exceptions
 
-    def decorator(func: Callable[..., T]) -> Callable[..., T]:
+    def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         @wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> T:
             last_exception: Optional[Exception] = None
@@ -160,7 +160,7 @@ def retry(
                 raise last_exception
             raise RuntimeError(f"Retry exhausted for {func.__name__}")
 
-        return wrapper
+        return wrapper  # type: ignore[return-value]
 
     return decorator
 
@@ -300,7 +300,7 @@ class CircuitBreaker:
         self._last_failure_time = None
         logger.info(f"[CircuitBreaker] '{self.name}' manually reset")
 
-    def __call__(self, func: Callable[..., T]) -> Callable[..., T]:
+    def __call__(self, func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         """Decorator to wrap a function with circuit breaker logic."""
 
         @wraps(func)
@@ -318,11 +318,11 @@ class CircuitBreaker:
                 await self._record_failure(e)
                 raise
 
-            except Exception as e:
+            except Exception:
                 # Don't count other exceptions as circuit failures
                 raise
 
-        return wrapper
+        return wrapper  # type: ignore[return-value]
 
     @classmethod
     def get(cls, name: str) -> Optional["CircuitBreaker"]:
@@ -409,7 +409,7 @@ class RateLimiter:
 
             return wait_time
 
-    def __call__(self, func: Callable[..., T]) -> Callable[..., T]:
+    def __call__(self, func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         """Decorator to wrap a function with rate limiting."""
 
         @wraps(func)
@@ -424,7 +424,7 @@ class RateLimiter:
 
             return await func(*args, **kwargs)
 
-        return wrapper
+        return wrapper  # type: ignore[return-value]
 
 
 # =============================================================================
@@ -505,7 +505,7 @@ def with_timeout(seconds: float) -> Callable:
             ...
     """
 
-    def decorator(func: Callable[..., T]) -> Callable[..., T]:
+    def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         @wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> T:
             try:
@@ -514,7 +514,7 @@ def with_timeout(seconds: float) -> Callable:
                 logger.error(f"[Timeout] {func.__name__} timed out after {seconds}s")
                 raise
 
-        return wrapper
+        return wrapper  # type: ignore[return-value]
 
     return decorator
 

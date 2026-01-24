@@ -85,7 +85,7 @@ def redact_string(text: str, show_chars: int = 4) -> str:
     # Redact patterns that look like secrets
     for pattern in SECRET_PATTERNS:
 
-        def replacer(match):
+        def replacer(match: re.Match[str]) -> str:
             value = match.group(0)
             if len(value) <= show_chars:
                 return "*" * len(value)

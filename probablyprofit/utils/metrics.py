@@ -174,7 +174,7 @@ class Histogram:
                 if value <= bucket:
                     self._counts[label_key][bucket] += 1
 
-    def time(self, labels: Optional[Dict[str, str]] = None):
+    def time(self, labels: Optional[Dict[str, str]] = None) -> "_HistogramTimer":
         """Context manager to time a block of code."""
         return _HistogramTimer(self, labels)
 
@@ -224,11 +224,11 @@ class _HistogramTimer:
         self.labels = labels
         self.start_time: float = 0
 
-    def __enter__(self):
+    def __enter__(self) -> "_HistogramTimer":
         self.start_time = time.perf_counter()
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *args: Any) -> None:
         duration = time.perf_counter() - self.start_time
         self.histogram.observe(duration, self.labels)
 
@@ -248,7 +248,7 @@ class MetricsRegistry:
         print(registry.to_prometheus())
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._counters: Dict[str, Counter] = {}
         self._gauges: Dict[str, Gauge] = {}
         self._histograms: Dict[str, Histogram] = {}
@@ -294,7 +294,7 @@ class MetricsRegistry:
 
     def get_all_stats(self) -> Dict[str, Any]:
         """Get all metrics as a dictionary."""
-        stats = {"counters": {}, "gauges": {}, "histograms": {}}
+        stats: Dict[str, Any] = {"counters": {}, "gauges": {}, "histograms": {}}
         with self._lock:
             for name, counter in self._counters.items():
                 stats["counters"][name] = dict(counter._values)

@@ -15,9 +15,9 @@ class PluginConfig:
 
     enabled: bool = True
     priority: int = 0  # Higher = runs first
-    options: Dict[str, Any] = None
+    options: Optional[Dict[str, Any]] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.options is None:
             self.options = {}
 
@@ -28,7 +28,7 @@ class BasePlugin(ABC):
     name: str = "base_plugin"
     version: str = "1.0.0"
 
-    def __init__(self, config: PluginConfig = None):
+    def __init__(self, config: Optional[PluginConfig] = None):
         self.config = config or PluginConfig()
         self._initialized = False
 
