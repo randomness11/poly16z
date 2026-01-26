@@ -8,7 +8,7 @@ const terminalScenes = [
   [
     { type: 'input', text: '$ pip install probablyprofit' },
     { type: 'output', text: 'Collecting probablyprofit...' },
-    { type: 'success', text: '✓ Installed probablyprofit-1.1.0' },
+    { type: 'success', text: '✓ Installed probablyprofit-1.2.0' },
     { type: 'input', text: '$ probablyprofit run --paper' },
     { type: 'output', text: '' },
     { type: 'header', text: '╔════════════════════════════════════╗' },
@@ -303,7 +303,7 @@ export function LandingPage() {
             {/* Version Badge */}
             <div className="mt-4 sm:mt-6 flex items-center gap-3 sm:gap-4">
               <span className="px-2 py-0.5 sm:py-1 bg-green-400/10 border border-green-400/30 text-green-400 font-mono text-[10px] sm:text-xs">
-                v1.1.0
+                v1.2.0
               </span>
               <span className="text-landing-text-muted text-[10px] sm:text-xs font-mono">
                 MIT • Open Source
@@ -313,20 +313,23 @@ export function LandingPage() {
         </div>
       </main>
 
-      {/* Minimal Footer */}
-      <footer className="border-t border-landing-border py-2 sm:py-3">
-        <p className="text-center text-landing-text-muted font-mono text-[10px] sm:text-xs">
-          made by{' '}
-          <a
-            href="https://x.com/ankitkr0"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-white hover:text-green-400 transition-colors"
-          >
-            @ankitkr0
-          </a>
-          {' '}• open source
-        </p>
+      {/* Footer */}
+      <footer className="border-t border-landing-border py-4 sm:py-6">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-landing-text-muted font-mono text-[10px] sm:text-xs">
+              <a href="https://github.com/randomness11/probablyprofit" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>
+              <a href="https://pypi.org/project/probablyprofit/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">PyPI</a>
+              <a href="https://github.com/randomness11/probablyprofit/tree/main/docs" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Docs</a>
+              <a href="https://x.com/ankitkr0" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Twitter</a>
+            </div>
+            <p className="text-landing-text-muted font-mono text-[10px] sm:text-xs">
+              made by{' '}
+              <a href="https://x.com/ankitkr0" target="_blank" rel="noopener noreferrer" className="text-white hover:text-green-400 transition-colors">@ankitkr0</a>
+              {' '}• MIT License
+            </p>
+          </div>
+        </div>
       </footer>
     </div>
   );
